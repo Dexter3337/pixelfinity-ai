@@ -1,40 +1,109 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Share } from 'lucide-react';
+import { ArrowLeft, Download, Share, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ImageUploader from '@/components/ImageUploader';
-import EnhancementOptions, { EnhancementOption } from '@/components/EnhancementOptions';
+import EnhancementOptions, { EnhancementOption, EnhancementStrengthParams } from '@/components/EnhancementOptions';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
-import { enhancementEngine, EnhancementResult } from '@/lib/imageEnhancement';
+import { enhancementEngine } from '@/lib/enhancementEngine';
 import { toast } from 'sonner';
+
+const DEFAULT_ENHANCEMENT_PARAMS: EnhancementStrengthParams = {
+  detailLevel: 70,
+  colorIntensity: 60,
+  noiseReduction: 50,
+  sharpness: 65,
+  brightness: 0,
+  contrast: 10
+};
 
 const Enhance = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [enhancementOption, setEnhancementOption] = useState<EnhancementOption>('auto');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [enhancementResult, setEnhancementResult] = useState<EnhancementResult | null>(null);
+  const [enhancementResult, setEnhancementResult] = useState<any | null>(null);
   const [enhancementCount, setEnhancementCount] = useState(0);
+  const [enhancementParams, setEnhancementParams] = useState<EnhancementStrengthParams>(DEFAULT_ENHANCEMENT_PARAMS);
+  const [processingStage, setProcessingStage] = useState<string>('');
+  const [userRating, setUserRating] = useState<'thumbsUp' | 'thumbsDown' | null>(null);
   
-  // Initialize enhancement engine
   useEffect(() => {
-    enhancementEngine.initialize()
-      .then(success => {
-        if (success) {
-          console.log('Enhancement engine initialized successfully');
-        } else {
-          console.error('Enhancement engine initialization failed');
-          toast.error('Failed to initialize enhancement engine. Please reload the page.');
-        }
-      });
+    const initializeEngine = async () => {
+      setProcessingStage('Initializing AI models...');
+      const success = await enhancementEngine.initialize();
+      
+      if (success) {
+        console.log('Enhancement engine initialized successfully');
+        setProcessingStage('');
+      } else {
+        console.error('Enhancement engine initialization failed');
+        toast.error('Failed to initialize enhancement engine. Please reload the page.');
+      }
+    };
+    
+    initializeEngine();
   }, []);
   
   const handleImageSelected = (file: File) => {
     setSelectedImage(file);
     setEnhancementResult(null);
+    setUserRating(null);
+  };
+  
+  const handleEnhancementOptionSelected = (option: EnhancementOption) => {
+    setEnhancementOption(option);
+    
+    switch (option) {
+      case 'hdr':
+        setEnhancementParams({
+          ...enhancementParams,
+          detailLevel: 75,
+          contrast: 30,
+          brightness: 10,
+        });
+        break;
+      case 'night':
+        setEnhancementParams({
+          ...enhancementParams,
+          noiseReduction: 80,
+          brightness: 40,
+          contrast: 20,
+        });
+        break;
+      case 'portrait':
+        setEnhancementParams({
+          ...enhancementParams,
+          detailLevel: 65,
+          noiseReduction: 60,
+          sharpness: 60,
+        });
+        break;
+      case 'color':
+        setEnhancementParams({
+          ...enhancementParams,
+          colorIntensity: 80,
+          contrast: 15,
+        });
+        break;
+      case 'detail':
+        setEnhancementParams({
+          ...enhancementParams,
+          detailLevel: 90,
+          sharpness: 85,
+          noiseReduction: 30,
+        });
+        break;
+      default:
+        break;
+    }
+  };
+  
+  const resetEnhancementParams = () => {
+    setEnhancementParams(DEFAULT_ENHANCEMENT_PARAMS);
+    toast.info('Parameters reset to defaults');
   };
   
   const handleEnhance = async () => {
@@ -44,29 +113,47 @@ const Enhance = () => {
     }
     
     setIsProcessing(true);
+    setProcessingStage('Analyzing image...');
     toast.info('Processing your image with advanced AI enhancement...');
     
     try {
-      // Process the image
-      const result = await enhancementEngine.enhance(selectedImage, enhancementOption);
+      setProcessingStage('Applying enhancement algorithms...');
+      const result = await enhancementEngine.enhance(selectedImage, enhancementOption, enhancementParams);
       
-      // Update state with result
+      setProcessingStage('Finalizing results...');
+      
+      if (result.metrics && result.metrics.improvement < 10) {
+        toast.warning('Only minor improvements were possible for this image.');
+      } else {
+        toast.success('Image enhanced successfully!');
+      }
+      
       setEnhancementResult(result);
       setEnhancementCount(count => count + 1);
+      setUserRating(null);
       
-      toast.success('Image enhanced successfully!');
     } catch (error) {
       console.error('Enhancement failed:', error);
       toast.error('Enhancement failed. Please try again.');
     } finally {
       setIsProcessing(false);
+      setProcessingStage('');
+    }
+  };
+  
+  const handleUserRating = (isPositive: boolean) => {
+    setUserRating(isPositive ? 'thumbsUp' : 'thumbsDown');
+    
+    if (isPositive) {
+      toast.success('Thanks for your positive feedback!');
+    } else {
+      toast.info('Thanks for your feedback. We\'ll use it to improve our enhancement algorithms.');
     }
   };
   
   const handleDownload = () => {
     if (!enhancementResult) return;
     
-    // Create a download link
     const link = document.createElement('a');
     link.href = enhancementResult.after;
     link.download = `enhanced-${selectedImage?.name || 'image'}.jpg`;
@@ -81,11 +168,9 @@ const Enhance = () => {
     if (!enhancementResult) return;
     
     try {
-      // Convert data URL to blob
       const response = await fetch(enhancementResult.after);
       const blob = await response.blob();
       
-      // Use Web Share API if available
       if (navigator.share) {
         await navigator.share({
           files: [new File([blob], 'enhanced-image.jpg', { type: 'image/jpeg' })],
@@ -95,7 +180,6 @@ const Enhance = () => {
         
         toast.success('Image shared successfully.');
       } else {
-        // Fallback for browsers that don't support Web Share API
         toast.error('Sharing is not supported in your browser.');
       }
     } catch (error) {
@@ -123,7 +207,6 @@ const Enhance = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Left Column: Upload and Options */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -135,9 +218,13 @@ const Enhance = () => {
               {selectedImage && (
                 <EnhancementOptions 
                   selectedOption={enhancementOption}
-                  onOptionSelected={setEnhancementOption}
+                  onOptionSelected={handleEnhancementOptionSelected}
                   isProcessing={isProcessing}
                   onEnhance={handleEnhance}
+                  enhancementParams={enhancementParams}
+                  onParamsChange={setEnhancementParams}
+                  hasResult={!!enhancementResult}
+                  onResetParams={resetEnhancementParams}
                 />
               )}
               
@@ -148,11 +235,11 @@ const Enhance = () => {
                 <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-primary h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.max(0, 100 - enhancementCount * 100)}%` }}
+                    style={{ width: `${Math.max(0, 100 - enhancementCount * 10)}%` }}
                   ></div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  You have {Math.max(0, 1 - enhancementCount)} free enhancements remaining today. 
+                  You have {Math.max(0, 10 - enhancementCount)} free enhancements remaining today. 
                   <Link to="/pricing" className="text-primary hover:underline ml-1">
                     Upgrade for more
                   </Link>
@@ -160,37 +247,90 @@ const Enhance = () => {
               </div>
             </motion.div>
             
-            {/* Right Column: Results */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
             >
-              {enhancementResult ? (
+              {isProcessing ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center p-12 border-2 border-dashed border-gray-200 rounded-xl">
+                    <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                      <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">Enhancing Your Image</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                      {processingStage || 'Processing with advanced AI algorithms...'}
+                    </p>
+                    
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+                      <div className="bg-primary h-2 rounded-full animate-progress"></div>
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      This may take a few moments depending on the image size and complexity.
+                    </p>
+                  </div>
+                </div>
+              ) : enhancementResult ? (
                 <div className="space-y-4">
                   <div className="glass-card p-6 rounded-xl shadow-lg">
                     <BeforeAfterSlider 
                       beforeImage={enhancementResult.before}
                       afterImage={enhancementResult.after}
+                      metrics={enhancementResult.metrics}
                       className="w-full rounded-lg overflow-hidden"
                     />
                     
-                    <div className="flex gap-4 mt-6">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 rounded-full"
-                        onClick={handleDownload}
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                      <Button 
-                        className="flex-1 rounded-full"
-                        onClick={handleShare}
-                      >
-                        <Share className="mr-2 h-4 w-4" />
-                        Share
-                      </Button>
+                    <div className="mt-6 space-y-4">
+                      {enhancementResult.appliedEnhancements && enhancementResult.appliedEnhancements.length > 0 && (
+                        <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
+                          <span className="font-medium">Applied Enhancements:</span>{' '}
+                          {enhancementResult.appliedEnhancements.join(', ')}
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between border-t border-b border-gray-200 py-3">
+                        <span className="text-sm font-medium">Was this enhancement helpful?</span>
+                        <div className="flex gap-2">
+                          <Button
+                            variant={userRating === 'thumbsUp' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleUserRating(true)}
+                            className="gap-1.5"
+                          >
+                            <ThumbsUp className="h-4 w-4" />
+                            Yes
+                          </Button>
+                          <Button
+                            variant={userRating === 'thumbsDown' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleUserRating(false)}
+                            className="gap-1.5"
+                          >
+                            <ThumbsDown className="h-4 w-4" />
+                            No
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-4">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 rounded-full"
+                          onClick={handleDownload}
+                        >
+                          <Download className="mr-2 h-4 w-4" />
+                          Download
+                        </Button>
+                        <Button 
+                          className="flex-1 rounded-full"
+                          onClick={handleShare}
+                        >
+                          <Share className="mr-2 h-4 w-4" />
+                          Share
+                        </Button>
+                      </div>
                     </div>
                   </div>
                   
@@ -224,6 +364,21 @@ const Enhance = () => {
       </main>
       
       <Footer />
+      
+      <style jsx>{`
+        @keyframes progress {
+          0% { width: 0%; }
+          20% { width: 20%; }
+          50% { width: 50%; }
+          70% { width: 70%; }
+          90% { width: 90%; }
+          100% { width: 95%; }
+        }
+        
+        .animate-progress {
+          animation: progress 3s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };
