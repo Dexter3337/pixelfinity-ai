@@ -1,5 +1,5 @@
 
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     // Only use componentTagger in development mode
     mode === 'development' && {
       name: 'lovable-tagger',
-      apply: 'serve',
+      apply: 'serve' as const,
       // Empty transform to avoid errors
       transform() { return null; }
     }
