@@ -1,140 +1,81 @@
 
-import { useState } from 'react';
+import React from 'react';
+import { BeforeAfterSlider } from '@/components/BeforeAfterSlider';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ThumbsUp, ThumbsDown, Download, Share } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import BeforeAfterSlider from '@/components/BeforeAfterSlider';
-import { toast } from 'sonner';
+import { EnhancementResult } from '@/lib/enhancementEngine';
 
 interface ResultSectionProps {
-  enhancementResult: any;
-  selectedImage: File | null;
+  result: EnhancementResult;
 }
 
-const ResultSection = ({ enhancementResult, selectedImage }: ResultSectionProps) => {
-  const [userRating, setUserRating] = useState<'thumbsUp' | 'thumbsDown' | null>(null);
-  
-  const handleUserRating = (isPositive: boolean) => {
-    setUserRating(isPositive ? 'thumbsUp' : 'thumbsDown');
-    
-    if (isPositive) {
-      toast.success('Thanks for your positive feedback!');
-    } else {
-      toast.info('Thanks for your feedback. We\'ll use it to improve our enhancement algorithms.');
-    }
-  };
-  
+export const ResultSection: React.FC<ResultSectionProps> = ({ result }) => {
   const handleDownload = () => {
-    if (!enhancementResult) return;
-    
+    // Create a link element
     const link = document.createElement('a');
-    link.href = enhancementResult.after;
-    link.download = `enhanced-${selectedImage?.name || 'image'}.jpg`;
+    link.href = result.after;
+    link.download = 'enhanced-image.jpg';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    toast.success('Image downloaded successfully.');
-  };
-  
-  const handleShare = async () => {
-    if (!enhancementResult) return;
-    
-    try {
-      const response = await fetch(enhancementResult.after);
-      const blob = await response.blob();
-      
-      if (navigator.share) {
-        await navigator.share({
-          files: [new File([blob], 'enhanced-image.jpg', { type: 'image/jpeg' })],
-          title: 'Enhanced Image',
-          text: 'Check out this image enhanced with PixelEnhance AI!'
-        });
-        
-        toast.success('Image shared successfully.');
-      } else {
-        toast.error('Sharing is not supported in your browser.');
-      }
-    } catch (error) {
-      console.error('Sharing failed:', error);
-      toast.error('Failed to share image.');
-    }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="glass-card p-6 rounded-xl shadow-lg">
-        <BeforeAfterSlider 
-          beforeImage={enhancementResult.before}
-          afterImage={enhancementResult.after}
-          metrics={enhancementResult.metrics}
-          className="w-full rounded-lg overflow-hidden"
-        />
-        
-        <div className="mt-6 space-y-4">
-          {enhancementResult.appliedEnhancements && enhancementResult.appliedEnhancements.length > 0 && (
-            <div className="text-sm text-muted-foreground bg-gray-50 p-3 rounded-lg">
-              <span className="font-medium">Applied Enhancements:</span>{' '}
-              {enhancementResult.appliedEnhancements.join(', ')}
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between border-t border-b border-gray-200 py-3">
-            <span className="text-sm font-medium">Was this enhancement helpful?</span>
-            <div className="flex gap-2">
-              <Button
-                variant={userRating === 'thumbsUp' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleUserRating(true)}
-                className="gap-1.5"
-              >
-                <ThumbsUp className="h-4 w-4" />
-                Yes
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-6">
+          <BeforeAfterSlider
+            before={result.before}
+            after={result.after}
+          />
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col gap-6 md:flex-row">
+        <Card className="flex-1">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Enhancement Metrics</h3>
+            {result.metrics ? (
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Overall Improvement:</span>
+                  <span className="font-medium">{Math.round(result.metrics.improvement)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Image Quality (PSNR):</span>
+                  <span className="font-medium">{result.metrics.psnr.toFixed(2)} dB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Structural Similarity:</span>
+                  <span className="font-medium">{result.metrics.ssim.toFixed(3)}</span>
+                </div>
+              </div>
+            ) : (
+              <p>No enhancement metrics available</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="flex-1">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Applied Enhancements</h3>
+            {result.appliedEnhancements.length > 0 ? (
+              <ul className="list-disc list-inside space-y-1">
+                {result.appliedEnhancements.map((enhancement, index) => (
+                  <li key={index}>{enhancement}</li>
+                ))}
+              </ul>
+            ) : (
+              <p>No enhancements applied</p>
+            )}
+            <div className="mt-4">
+              <Button onClick={handleDownload} className="w-full">
+                Download Enhanced Image
               </Button>
-              <Button
-                variant={userRating === 'thumbsDown' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleUserRating(false)}
-                className="gap-1.5"
-              >
-                <ThumbsDown className="h-4 w-4" />
-                No
-              </Button>
             </div>
-          </div>
-          
-          <div className="flex gap-4">
-            <Button 
-              variant="outline" 
-              className="flex-1 rounded-full"
-              onClick={handleDownload}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-            <Button 
-              className="flex-1 rounded-full"
-              onClick={handleShare}
-            >
-              <Share className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="text-center mt-6">
-        <p className="text-muted-foreground text-sm mb-4">
-          Want to enhance more photos? Check out our affordable plans.
-        </p>
-        <Button asChild variant="outline" className="rounded-full">
-          <Link to="/pricing">
-            View Pricing
-          </Link>
-        </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 };
-
-export default ResultSection;

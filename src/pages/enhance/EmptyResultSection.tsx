@@ -1,20 +1,23 @@
 
-import { Share } from 'lucide-react';
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 
-const EmptyResultSection = () => {
+export const EmptyResultSection: React.FC = () => {
   return (
-    <div className="h-full flex items-center justify-center">
-      <div className="text-center p-12 border-2 border-dashed border-gray-200 rounded-xl">
-        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Share className="h-6 w-6 text-gray-400" />
+    <Card className="w-full mt-8">
+      <CardContent className="p-6">
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-20 h-20 mb-4 text-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-medium mb-2">No Results Yet</h3>
+          <p className="text-gray-500 max-w-md">
+            Upload an image and select an enhancement option to see the before and after comparison here.
+          </p>
         </div>
-        <h3 className="text-lg font-medium mb-2">No Result Yet</h3>
-        <p className="text-muted-foreground text-sm mb-4">
-          Upload an image and enhance it to see the before and after comparison here.
-        </p>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
-
-export default EmptyResultSection;
