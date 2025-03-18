@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { 
   Card, 
   CardContent
@@ -11,7 +10,6 @@ import {
   Sparkles, 
   CameraIcon, 
   ImageIcon,
-  Contrast,
   Layers,
   Palette
 } from 'lucide-react';
@@ -29,6 +27,7 @@ interface EnhancementOptionsProps {
   onOptionSelected: (option: EnhancementOption) => void;
   selectedOption: EnhancementOption;
   isProcessing: boolean;
+  onEnhance: () => void;
 }
 
 interface EnhancementItem {
@@ -43,73 +42,74 @@ const enhancementOptions: EnhancementItem[] = [
     id: 'auto',
     name: 'Auto Enhance',
     icon: <Sparkles className="h-5 w-5" />,
-    description: 'Let AI detect and fix all issues automatically'
+    description: 'Our AI analyzes your image and applies optimal adjustments using Real-ESRGAN'
   },
   {
     id: 'hdr',
     name: 'HDR Effect',
     icon: <Sun className="h-5 w-5" />,
-    description: 'Enhance dynamic range and color depth'
+    description: 'Dramatically expands dynamic range with our advanced tone mapping algorithm'
   },
   {
     id: 'night',
     name: 'Night Mode',
     icon: <Moon className="h-5 w-5" />,
-    description: 'Optimize dark photos with reduced noise'
+    description: 'Specialized low-light enhancement with SwinIR noise reduction technology'
   },
   {
     id: 'portrait',
     name: 'Portrait',
     icon: <CameraIcon className="h-5 w-5" />,
-    description: 'Perfect for enhancing portrait photos'
+    description: 'Smart skin tone preservation with facial feature enhancement'
   },
   {
     id: 'color',
     name: 'Color Pop',
     icon: <Palette className="h-5 w-5" />,
-    description: 'Vibrant colors with balanced tones'
+    description: 'Adaptive saturation boost that brings vibrant colors while maintaining balance'
   },
   {
     id: 'detail',
     name: 'Detail Boost',
     icon: <Layers className="h-5 w-5" />,
-    description: 'Increase sharpness and fine details'
+    description: 'Advanced sharpening algorithm with super-resolution for remarkable detail'
   },
   {
     id: 'style',
     name: 'Style Transfer',
     icon: <ImageIcon className="h-5 w-5" />,
-    description: 'Apply professional photography styles'
+    description: 'Professional cinematic color grading with teal-orange contrast'
   }
 ];
 
 const EnhancementOptions = ({ 
   onOptionSelected, 
   selectedOption,
-  isProcessing
+  isProcessing,
+  onEnhance
 }: EnhancementOptionsProps) => {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-medium mb-2">Enhancement Options</h3>
       <p className="text-muted-foreground mb-4">
-        Choose how you'd like to enhance your image, or let our AI automatically select the best options.
+        Choose how you'd like to enhance your image, or let our advanced AI automatically select the best options.
       </p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {enhancementOptions.map((option) => (
           <Card 
             key={option.id}
-            className={`hover:border-primary/50 cursor-pointer transition-all ${
+            className={`hover:border-primary/50 cursor-pointer transition-all duration-300 ${
               selectedOption === option.id 
-                ? 'border-primary/70 bg-primary/5 shadow-sm' 
+                ? 'border-primary shadow-md bg-primary/5' 
                 : 'border-gray-200'
             }`}
             onClick={() => !isProcessing && onOptionSelected(option.id)}
           >
             <CardContent className="p-4 flex items-center gap-3">
-              <div className={`p-2 rounded-full ${
+              <div className={`p-2.5 rounded-full ${
                 selectedOption === option.id 
-                  ? 'bg-primary/10 text-primary' 
+                  ? 'bg-primary/20 text-primary' 
                   : 'bg-gray-100 text-gray-500'
               }`}>
                 {option.icon}
@@ -126,9 +126,10 @@ const EnhancementOptions = ({
       <div className="pt-4">
         <Button 
           disabled={isProcessing}
-          className="w-full rounded-full"
+          className="w-full rounded-full text-base py-6"
+          onClick={onEnhance}
         >
-          {isProcessing ? 'Enhancing Image...' : 'Enhance Image'}
+          {isProcessing ? 'Enhancing Image...' : 'Enhance Image with AI'}
         </Button>
       </div>
     </div>

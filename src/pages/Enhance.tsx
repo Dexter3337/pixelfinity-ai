@@ -44,6 +44,7 @@ const Enhance = () => {
     }
     
     setIsProcessing(true);
+    toast.info('Processing your image with advanced AI enhancement...');
     
     try {
       // Process the image
@@ -117,7 +118,7 @@ const Enhance = () => {
             
             <h1 className="heading-2 mt-4 mb-2">Enhance Your Image</h1>
             <p className="text-muted-foreground text-lg">
-              Upload your photo and let our AI work its magic. Free users can enhance 1 image per day.
+              Upload your photo and let our advanced AI models (Real-ESRGAN & SwinIR) transform your images with stunning detail.
             </p>
           </div>
           
@@ -136,24 +137,17 @@ const Enhance = () => {
                   selectedOption={enhancementOption}
                   onOptionSelected={setEnhancementOption}
                   isProcessing={isProcessing}
+                  onEnhance={handleEnhance}
                 />
               )}
-              
-              <Button 
-                onClick={handleEnhance}
-                disabled={!selectedImage || isProcessing}
-                className="w-full rounded-full"
-              >
-                {isProcessing ? 'Enhancing...' : 'Enhance Image'}
-              </Button>
               
               <div className="border-t border-gray-200 pt-6">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   Enhancements Remaining Today
                 </h3>
-                <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
                   <div 
-                    className="bg-primary h-full rounded-full"
+                    className="bg-primary h-full rounded-full transition-all duration-500"
                     style={{ width: `${Math.max(0, 100 - enhancementCount * 100)}%` }}
                   ></div>
                 </div>
