@@ -94,8 +94,7 @@ const Enhance = () => {
       
       <Footer />
       
-      <style>
-        {`
+      <style jsx>{`
         @keyframes progress {
           0% { width: 0%; }
           20% { width: 20%; }
@@ -108,8 +107,7 @@ const Enhance = () => {
         .animate-progress {
           animation: progress 3s ease-in-out infinite;
         }
-        `}
-      </style>
+      `}</style>
     </div>
   );
 };
