@@ -1,23 +1,30 @@
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
 
 interface EnhancementCounterProps {
-  count: number;
+  enhancementCount: number;
 }
 
-export const EnhancementCounter: React.FC<EnhancementCounterProps> = ({ count }) => {
+const EnhancementCounter = ({ enhancementCount }: EnhancementCounterProps) => {
   return (
-    <Card className="w-full bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-medium">Images Enhanced</h3>
-            <p className="text-blue-100">Total number of image enhancements</p>
-          </div>
-          <div className="text-4xl font-bold">{count}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="border-t border-gray-200 pt-6">
+      <h3 className="text-sm font-medium text-muted-foreground mb-2">
+        Enhancements Remaining Today
+      </h3>
+      <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
+        <div 
+          className="bg-primary h-full rounded-full transition-all duration-500"
+          style={{ width: `${Math.max(0, 100 - enhancementCount * 10)}%` }}
+        ></div>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2">
+        You have {Math.max(0, 10 - enhancementCount)} free enhancements remaining today. 
+        <Link to="/pricing" className="text-primary hover:underline ml-1">
+          Upgrade for more
+        </Link>
+      </p>
+    </div>
   );
 };
+
+export default EnhancementCounter;

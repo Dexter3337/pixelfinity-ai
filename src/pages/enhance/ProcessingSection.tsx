@@ -1,33 +1,32 @@
 
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
+import { Sparkles } from 'lucide-react';
 
 interface ProcessingSectionProps {
-  stage: string;
+  processingStage: string;
 }
 
-export const ProcessingSection: React.FC<ProcessingSectionProps> = ({ stage }) => {
+const ProcessingSection = ({ processingStage }: ProcessingSectionProps) => {
   return (
-    <Card className="w-full mt-8">
-      <CardContent className="p-6">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="relative w-20 h-20">
-            <div className="absolute inset-0 border-4 border-gray-200 border-solid rounded-full"></div>
-            <div className="absolute inset-0 border-4 border-blue-500 border-solid rounded-full animate-spin" style={{ borderTopColor: 'transparent', animationDuration: '1.5s' }}></div>
-          </div>
-          
-          <h3 className="text-xl font-medium">{stage || 'Processing image...'}</h3>
-          
-          <div className="w-full max-w-md">
-            <Progress value={65} className="h-2" />
-          </div>
-          
-          <p className="text-gray-500 text-center">
-            Applying AI-powered enhancements to your image. This may take a moment as we analyze and optimize your photo.
-          </p>
+    <div className="h-full flex items-center justify-center">
+      <div className="text-center p-12 border-2 border-dashed border-gray-200 rounded-xl">
+        <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+          <Sparkles className="h-6 w-6 text-primary animate-pulse" />
         </div>
-      </CardContent>
-    </Card>
+        <h3 className="text-lg font-medium mb-2">Enhancing Your Image</h3>
+        <p className="text-muted-foreground text-sm mb-4">
+          {processingStage || 'Processing with advanced AI algorithms...'}
+        </p>
+        
+        <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+          <div className="bg-primary h-2 rounded-full animate-progress"></div>
+        </div>
+        
+        <p className="text-xs text-muted-foreground">
+          This may take a few moments depending on the image size and complexity.
+        </p>
+      </div>
+    </div>
   );
 };
+
+export default ProcessingSection;
