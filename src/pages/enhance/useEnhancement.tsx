@@ -31,25 +31,30 @@ export const useEnhancement = () => {
   const [processingStage, setProcessingStage] = useState<string>('');
   const [isEngineInitialized, setIsEngineInitialized] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [apiAvailable, setApiAvailable] = useState(true);
 
   useEffect(() => {
     const initializeEngine = async () => {
       try {
         setProcessingStage('Initializing enhancement engine...');
+        // Try to initialize the enhancement engine
         const success = await enhancementEngine.initialize();
         
         setIsEngineInitialized(success);
         if (success) {
           console.log('Enhancement engine initialized successfully');
           setUsingFallback(false);
+          setApiAvailable(true);
         } else {
           console.log('Enhancement engine using fallback mode');
           setUsingFallback(true);
+          setApiAvailable(false);
           toast.info('Using local enhancement mode due to connection issues');
         }
       } catch (error) {
         console.error('Enhancement engine initialization error:', error);
         setUsingFallback(true);
+        setApiAvailable(false);
         toast.info('Using local enhancement mode due to connection issues');
       } finally {
         setProcessingStage('');
@@ -72,6 +77,7 @@ export const useEnhancement = () => {
   const handleEnhancementOptionSelected = (option: EnhancementOption) => {
     setEnhancementOption(option);
     
+    // Apply preset parameters based on the selected enhancement option
     switch (option) {
       case 'hdr':
         setEnhancementParams({
@@ -135,6 +141,12 @@ export const useEnhancement = () => {
       return;
     }
     
+    // Check if API is available
+    if (!apiAvailable && !usingFallback) {
+      toast.error('Enhancement services are currently unavailable. Please try again later.');
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingStage('Analyzing image...');
     toast.info('Processing your image with AI enhancement...');
@@ -142,20 +154,24 @@ export const useEnhancement = () => {
     try {
       let result;
       
-      // Always use the fallback method from imageEnhancement.ts since we're having API issues
+      // Always use the fallback method from imageEnhancement.ts
       setProcessingStage('Applying enhancement algorithms...');
       result = await enhanceImage(selectedImage, enhancementOption, enhancementParams);
       
       setProcessingStage('Finalizing results...');
       
-      if (result.metrics && result.metrics.improvement < 10) {
-        toast.warning('Only minor improvements were possible for this image.');
+      if (result && result.metrics) {
+        if (result.metrics.improvement < 10) {
+          toast.warning('Only minor improvements were possible for this image.');
+        } else {
+          toast.success('Image enhanced successfully!');
+        }
+        
+        setEnhancementResult(result);
+        setEnhancementCount(prevCount => prevCount + 1);
       } else {
-        toast.success('Image enhanced successfully!');
+        throw new Error('Enhancement result is missing metrics');
       }
-      
-      setEnhancementResult(result);
-      setEnhancementCount(prevCount => prevCount + 1);
       
     } catch (error) {
       console.error('Enhancement failed:', error);
@@ -176,6 +192,7 @@ export const useEnhancement = () => {
     processingStage,
     isEngineInitialized,
     usingFallback,
+    apiAvailable,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,

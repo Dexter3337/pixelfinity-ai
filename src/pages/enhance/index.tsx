@@ -1,7 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Info } from 'lucide-react';
+import { ArrowLeft, Info, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -25,6 +25,7 @@ const Enhance = () => {
     processingStage,
     isEngineInitialized,
     usingFallback,
+    apiAvailable,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,
@@ -56,7 +57,16 @@ const Enhance = () => {
             <Alert className="mb-6 bg-blue-50 border-blue-200">
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-blue-700">
-                Using local enhancement mode. Your images will be processed locally for best results.
+                Using local enhancement mode. Your images will be processed locally with optimized algorithms.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          {!apiAvailable && !usingFallback && (
+            <Alert className="mb-6 bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-700">
+                Enhancement services are currently unavailable. Please try again later.
               </AlertDescription>
             </Alert>
           )}
@@ -92,7 +102,7 @@ const Enhance = () => {
                   onParamsChange={setEnhancementParams}
                   hasResult={!!enhancementResult}
                   onResetParams={resetEnhancementParams}
-                  disabled={isLimitReached}
+                  disabled={isLimitReached || (!apiAvailable && !usingFallback)}
                 />
               )}
               
