@@ -853,4 +853,506 @@ class EnhancementEngine {
     // Apply local contrast enhancement
     this.localContrastEnhancement(imgData, 10, 0.3);
     
-    //
+    // Apply tone mapping to RGB channels
+    for (let i = 0; i < data.length; i += 4) {
+      // Apply exposure adjustment
+      let r = data[i] * exposure;
+      let g = data[i + 1] * exposure;
+      let b = data[i + 2] * exposure;
+      
+      // Apply contrast adjustment
+      r = ((r / 255 - 0.5) * contrast + 0.5) * 255;
+      g = ((g / 255 - 0.5) * contrast + 0.5) * 255;
+      b = ((b / 255 - 0.5) * contrast + 0.5) * 255;
+      
+      // Apply gamma correction
+      r = Math.pow(r / 255, 1 / gamma) * 255;
+      g = Math.pow(g / 255, 1 / gamma) * 255;
+      b = Math.pow(b / 255, 1 / gamma) * 255;
+      
+      // Ensure values are in valid range
+      data[i] = Math.min(255, Math.max(0, r));
+      data[i + 1] = Math.min(255, Math.max(0, g));
+      data[i + 2] = Math.min(255, Math.max(0, b));
+    }
+    
+    // Apply saturation adjustment
+    this.adjustSaturation(imgData, saturation);
+    
+    // Put modified image data back to canvas
+    ctx.putImageData(imgData, 0, 0);
+    
+    // Return enhanced image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private localContrastEnhancement(imgData: ImageData, radius: number, amount: number): void {
+    const width = imgData.width;
+    const height = imgData.height;
+    const data = imgData.data;
+    
+    // Create a blurred version for local contrast detection
+    const blurred = this.boxBlur(imgData, radius);
+    const blurredData = blurred.data;
+    
+    // Apply local contrast enhancement
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        
+        // For each color channel
+        for (let c = 0; c < 3; c++) {
+          const original = data[i + c];
+          const blur = blurredData[i + c];
+          
+          // Calculate local contrast
+          const localContrast = original - blur;
+          
+          // Apply enhancement
+          data[i + c] = Math.min(255, Math.max(0, original + localContrast * amount));
+        }
+      }
+    }
+  }
+  
+  private adjustSaturation(imgData: ImageData, saturationFactor: number): void {
+    const data = imgData.data;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      // Convert RGB to HSL
+      const r = data[i] / 255;
+      const g = data[i + 1] / 255;
+      const b = data[i + 2] / 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+          default: h = 0;
+        }
+        
+        h /= 6;
+      }
+      
+      // Adjust saturation
+      s = Math.min(1, s * saturationFactor);
+      
+      // Convert back to RGB
+      let r1, g1, b1;
+      
+      if (s === 0) {
+        r1 = g1 = b1 = l; // achromatic
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        
+        r1 = this.hue2rgb(p, q, h + 1/3);
+        g1 = this.hue2rgb(p, q, h);
+        b1 = this.hue2rgb(p, q, h - 1/3);
+      }
+      
+      // Set the adjusted RGB values
+      data[i] = Math.round(r1 * 255);
+      data[i + 1] = Math.round(g1 * 255);
+      data[i + 2] = Math.round(b1 * 255);
+    }
+  }
+  
+  private async applyNightModeEnhancement(imageData: string, params: EnhancementStrengthParams): Promise<string> {
+    // Load the image
+    const img = await this.loadImage(imageData);
+    
+    // Create a canvas for processing
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    
+    // Get image data
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    
+    // First apply noise reduction (high strength)
+    const denoisedImageData = await this.applyNoiseReduction(imageData, params.noiseReduction * 1.5);
+    const denoisedImg = await this.loadImage(denoisedImageData);
+    
+    // Redraw the denoised image
+    ctx.drawImage(denoisedImg, 0, 0);
+    
+    // Get updated image data
+    const updatedImgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const updatedData = updatedImgData.data;
+    
+    // Apply brightness boost
+    const brightnessBoost = 1 + (params.brightness / 100);
+    
+    // Apply night enhancement effect (blue tint, brightness boost, etc.)
+    for (let i = 0; i < updatedData.length; i += 4) {
+      // Increase brightness in shadows
+      const r = updatedData[i];
+      const g = updatedData[i + 1];
+      const b = updatedData[i + 2];
+      
+      // Calculate luminance
+      const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      
+      // Apply stronger enhancement to dark areas
+      const shadowBoost = 1 + (1 - luminance) * 0.5;
+      
+      // Apply blue tint to shadows (typical of night photos)
+      const blueTint = 1 + (1 - luminance) * 0.1;
+      
+      // Apply transformations
+      updatedData[i] = Math.min(255, r * brightnessBoost * shadowBoost);
+      updatedData[i + 1] = Math.min(255, g * brightnessBoost * shadowBoost);
+      updatedData[i + 2] = Math.min(255, b * brightnessBoost * shadowBoost * blueTint);
+    }
+    
+    // Put modified image data back to canvas
+    ctx.putImageData(updatedImgData, 0, 0);
+    
+    // Return enhanced image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private async applyPortraitEnhancement(imageData: string, params: EnhancementStrengthParams): Promise<string> {
+    // First apply skin smoothing (noise reduction)
+    const smoothedImageData = await this.applyNoiseReduction(imageData, params.noiseReduction * 0.8);
+    
+    // Apply subtle sharpening to maintain details
+    const sharpenedImageData = await this.applySharpening(smoothedImageData, params.sharpness * 0.7);
+    
+    // Apply subtle color enhancement
+    const colorEnhancedImageData = await this.applyColorEnhancement(sharpenedImageData, params.colorIntensity * 0.9);
+    
+    // Load the image for final adjustments
+    const img = await this.loadImage(colorEnhancedImageData);
+    
+    // Create a canvas for final processing
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    
+    // Apply a subtle vignette effect (darken edges, focusing on the subject)
+    this.applyVignette(ctx, img.width, img.height, 0.8, 0.15);
+    
+    // Return enhanced portrait
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private applyVignette(ctx: CanvasRenderingContext2D, width: number, height: number, amount: number, falloff: number): void {
+    const gradient = ctx.createRadialGradient(
+      width / 2, height / 2, 0,
+      width / 2, height / 2, Math.sqrt(width * width + height * height) / 2
+    );
+    
+    gradient.addColorStop(0, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1 - falloff, 'rgba(0,0,0,0)');
+    gradient.addColorStop(1, `rgba(0,0,0,${amount})`);
+    
+    ctx.fillStyle = gradient;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  
+  private async applyColorPop(imageData: string, params: EnhancementStrengthParams): Promise<string> {
+    // Load the image
+    const img = await this.loadImage(imageData);
+    
+    // Create a canvas for processing
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    
+    // Get image data
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    
+    // Apply vibrance (selective saturation increase)
+    const saturationBoost = params.colorIntensity / 50;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i] / 255;
+      const g = data[i + 1] / 255;
+      const b = data[i + 2] / 255;
+      
+      // Convert RGB to HSL
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+          default: h = 0;
+        }
+        
+        h /= 6;
+      }
+      
+      // Apply selective saturation (vibrance)
+      // Increase saturation more for less saturated colors
+      const saturationIncrease = saturationBoost * (1 - s);
+      s = Math.min(1, s + saturationIncrease);
+      
+      // Convert back to RGB
+      let r1, g1, b1;
+      
+      if (s === 0) {
+        r1 = g1 = b1 = l; // achromatic
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        
+        r1 = this.hue2rgb(p, q, h + 1/3);
+        g1 = this.hue2rgb(p, q, h);
+        b1 = this.hue2rgb(p, q, h - 1/3);
+      }
+      
+      // Set the adjusted RGB values
+      data[i] = Math.round(r1 * 255);
+      data[i + 1] = Math.round(g1 * 255);
+      data[i + 2] = Math.round(b1 * 255);
+    }
+    
+    // Apply contrast enhancement
+    const contrastFactor = 1 + (params.contrast / 200);
+    
+    for (let i = 0; i < data.length; i += 4) {
+      // Apply contrast adjustment
+      for (let c = 0; c < 3; c++) {
+        const value = data[i + c];
+        const normalized = value / 255;
+        const adjusted = ((normalized - 0.5) * contrastFactor + 0.5) * 255;
+        data[i + c] = Math.min(255, Math.max(0, adjusted));
+      }
+    }
+    
+    // Put modified image data back to canvas
+    ctx.putImageData(imgData, 0, 0);
+    
+    // Return enhanced image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private async applyStyleTransfer(imageData: string, params: EnhancementStrengthParams): Promise<string> {
+    // This is a simplified style transfer. In a real app, this would use a neural network model
+    // Apply a combination of effects to create a cinematic look
+    
+    // First, apply color grading
+    let processedImage = await this.applyCinematicColorGrading(imageData, params);
+    
+    // Apply vignette effect
+    const img = await this.loadImage(processedImage);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    
+    // Apply a cinematic vignette
+    this.applyVignette(ctx, img.width, img.height, 0.4, 0.3);
+    
+    // Apply letterbox for cinematic aspect ratio (optional)
+    if (params.detailLevel > 80) {
+      this.applyLetterbox(ctx, img.width, img.height);
+    }
+    
+    // Return stylized image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private async applyCinematicColorGrading(imageData: string, params: EnhancementStrengthParams): Promise<string> {
+    // Load the image
+    const img = await this.loadImage(imageData);
+    
+    // Create a canvas for processing
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    
+    // Get image data
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    
+    // Apply cinematic color grading - slightly teal shadows, orange highlights
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      // Calculate luminance
+      const luminance = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      
+      // Teal shadows, orange highlights
+      if (luminance < 0.5) {
+        // Shadows - add teal (blue-green)
+        data[i] = Math.max(0, r * 0.9);
+        data[i + 1] = Math.min(255, g * 1.05);
+        data[i + 2] = Math.min(255, b * 1.1);
+      } else {
+        // Highlights - add orange
+        data[i] = Math.min(255, r * 1.1);
+        data[i + 1] = Math.min(255, g * 1.05);
+        data[i + 2] = Math.max(0, b * 0.9);
+      }
+    }
+    
+    // Apply contrast and saturation adjustment
+    const contrastAmount = 1.2;
+    const saturationAmount = 1.1;
+    
+    for (let i = 0; i < data.length; i += 4) {
+      // Apply contrast
+      for (let c = 0; c < 3; c++) {
+        const value = data[i + c];
+        const normalized = value / 255;
+        const contrasted = ((normalized - 0.5) * contrastAmount + 0.5) * 255;
+        data[i + c] = Math.min(255, Math.max(0, contrasted));
+      }
+      
+      // Convert to HSL for saturation adjustment
+      const r = data[i] / 255;
+      const g = data[i + 1] / 255;
+      const b = data[i + 2] / 255;
+      
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
+      
+      if (max === min) {
+        h = s = 0; // achromatic
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+          default: h = 0;
+        }
+        
+        h /= 6;
+      }
+      
+      // Apply saturation adjustment
+      s = Math.min(1, s * saturationAmount);
+      
+      // Convert back to RGB
+      if (s === 0) {
+        data[i] = data[i + 1] = data[i + 2] = Math.round(l * 255);
+      } else {
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        
+        data[i] = Math.round(this.hue2rgb(p, q, h + 1/3) * 255);
+        data[i + 1] = Math.round(this.hue2rgb(p, q, h) * 255);
+        data[i + 2] = Math.round(this.hue2rgb(p, q, h - 1/3) * 255);
+      }
+    }
+    
+    // Put modified image data back to canvas
+    ctx.putImageData(imgData, 0, 0);
+    
+    // Return graded image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+  
+  private applyLetterbox(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+    // Standard cinematic aspect ratio is 2.35:1
+    const targetRatio = 2.35 / 1;
+    const currentRatio = width / height;
+    
+    // If the image is already wider than cinematic ratio, no need to add letterbox
+    if (currentRatio >= targetRatio) return;
+    
+    // Calculate letterbox height
+    const targetHeight = width / targetRatio;
+    const letterboxHeight = (height - targetHeight) / 2;
+    
+    // Draw black bars at top and bottom
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, width, letterboxHeight);
+    ctx.fillRect(0, height - letterboxHeight, width, letterboxHeight);
+  }
+  
+  private async blendImages(original: string, enhanced: string, blendFactor: number): Promise<string> {
+    // Load both images
+    const imgOriginal = await this.loadImage(original);
+    const imgEnhanced = await this.loadImage(enhanced);
+    
+    // Create a canvas for blending
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(imgOriginal.width, imgEnhanced.width);
+    canvas.height = Math.max(imgOriginal.height, imgEnhanced.height);
+    
+    const ctx = canvas.getContext('2d')!;
+    
+    // Draw original image
+    ctx.drawImage(imgOriginal, 0, 0, canvas.width, canvas.height);
+    
+    // Get original image data
+    const originalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Draw enhanced image
+    ctx.drawImage(imgEnhanced, 0, 0, canvas.width, canvas.height);
+    
+    // Get enhanced image data
+    const enhancedData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Create result image data
+    const resultData = ctx.createImageData(canvas.width, canvas.height);
+    
+    // Blend pixels
+    for (let i = 0; i < resultData.data.length; i += 4) {
+      for (let c = 0; c < 3; c++) {
+        resultData.data[i + c] = 
+          originalData.data[i + c] * (1 - blendFactor) + 
+          enhancedData.data[i + c] * blendFactor;
+      }
+      
+      // Keep alpha channel from enhanced image
+      resultData.data[i + 3] = enhancedData.data[i + 3];
+    }
+    
+    // Put blended image data back to canvas
+    ctx.putImageData(resultData, 0, 0);
+    
+    // Return blended image
+    return canvas.toDataURL('image/jpeg', 0.95);
+  }
+}
+
+// Create singleton instance
+export const enhancementEngine = new EnhancementEngine();
