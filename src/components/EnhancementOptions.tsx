@@ -15,7 +15,8 @@ import {
   Layers,
   Palette,
   RotateCcw,
-  Sliders
+  Sliders,
+  Lock
 } from 'lucide-react';
 import {
   Accordion,
@@ -23,6 +24,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Link } from 'react-router-dom';
 
 export type EnhancementOption = 
   | 'auto'
@@ -51,6 +53,7 @@ interface EnhancementOptionsProps {
   onParamsChange: (params: EnhancementStrengthParams) => void;
   hasResult: boolean;
   onResetParams: () => void;
+  disabled?: boolean;
 }
 
 interface EnhancementItem {
@@ -58,6 +61,7 @@ interface EnhancementItem {
   name: string;
   icon: React.ReactNode;
   description: string;
+  premium?: boolean;
 }
 
 const enhancementOptions: EnhancementItem[] = [
@@ -65,25 +69,28 @@ const enhancementOptions: EnhancementItem[] = [
     id: 'auto',
     name: 'Auto Enhance',
     icon: <Sparkles className="h-5 w-5" />,
-    description: 'Our AI analyzes your image and applies optimal adjustments using Real-ESRGAN & SwinIR'
+    description: 'Our AI analyzes your image and applies optimal adjustments'
   },
   {
     id: 'hdr',
     name: 'HDR Effect',
     icon: <Sun className="h-5 w-5" />,
-    description: 'Dramatically expands dynamic range with our advanced tone mapping algorithm'
+    description: 'Dramatically expands dynamic range with our advanced tone mapping algorithm',
+    premium: true
   },
   {
     id: 'night',
     name: 'Night Mode',
     icon: <Moon className="h-5 w-5" />,
-    description: 'Specialized low-light enhancement with SwinIR noise reduction technology'
+    description: 'Specialized low-light enhancement with noise reduction technology',
+    premium: true
   },
   {
     id: 'portrait',
     name: 'Portrait',
     icon: <CameraIcon className="h-5 w-5" />,
-    description: 'Smart skin tone preservation with facial feature enhancement'
+    description: 'Smart skin tone preservation with facial feature enhancement',
+    premium: true
   },
   {
     id: 'color',
@@ -95,13 +102,15 @@ const enhancementOptions: EnhancementItem[] = [
     id: 'detail',
     name: 'Detail Boost',
     icon: <Layers className="h-5 w-5" />,
-    description: 'Advanced sharpening algorithm with super-resolution for remarkable detail'
+    description: 'Advanced sharpening algorithm with super-resolution for remarkable detail',
+    premium: true
   },
   {
     id: 'style',
     name: 'Style Transfer',
     icon: <ImageIcon className="h-5 w-5" />,
-    description: 'Professional cinematic color grading with teal-orange contrast'
+    description: 'Professional cinematic color grading with teal-orange contrast',
+    premium: true
   }
 ];
 
@@ -113,7 +122,8 @@ const EnhancementOptions = ({
   enhancementParams,
   onParamsChange,
   hasResult,
-  onResetParams
+  onResetParams,
+  disabled = false
 }: EnhancementOptionsProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -139,10 +149,15 @@ const EnhancementOptions = ({
               selectedOption === option.id 
                 ? 'border-primary shadow-md bg-primary/5' 
                 : 'border-gray-200'
-            }`}
-            onClick={() => !isProcessing && onOptionSelected(option.id)}
+            } ${disabled && 'opacity-75'}`}
+            onClick={() => !isProcessing && !disabled && onOptionSelected(option.id)}
           >
-            <CardContent className="p-4 flex items-center gap-3">
+            <CardContent className="p-4 flex items-center gap-3 relative">
+              {disabled && option.premium && (
+                <div className="absolute top-2 right-2">
+                  <Lock className="h-3.5 w-3.5 text-amber-500" />
+                </div>
+              )}
               <div className={`p-2.5 rounded-full ${
                 selectedOption === option.id 
                   ? 'bg-primary/20 text-primary' 
@@ -160,7 +175,7 @@ const EnhancementOptions = ({
       </div>
 
       {/* Manual Adjustment Controls */}
-      <Accordion type="single" collapsible>
+      <Accordion type="single" collapsible className={disabled ? 'opacity-75 pointer-events-none' : ''}>
         <AccordionItem value="advanced-controls">
           <AccordionTrigger className="text-sm">
             <div className="flex items-center">
@@ -182,7 +197,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('detailLevel', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
 
@@ -197,7 +212,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('colorIntensity', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
 
@@ -212,7 +227,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('noiseReduction', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
 
@@ -227,7 +242,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('sharpness', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
 
@@ -242,7 +257,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('brightness', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
 
@@ -257,7 +272,7 @@ const EnhancementOptions = ({
                     max={100}
                     step={1}
                     onValueChange={(values) => handleParamChange('contrast', values[0])}
-                    disabled={isProcessing}
+                    disabled={isProcessing || disabled}
                   />
                 </div>
               </div>
@@ -267,7 +282,7 @@ const EnhancementOptions = ({
                 size="sm"
                 className="w-full"
                 onClick={onResetParams}
-                disabled={isProcessing}
+                disabled={isProcessing || disabled}
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-2" />
                 Reset to Defaults
@@ -278,13 +293,29 @@ const EnhancementOptions = ({
       </Accordion>
       
       <div className="pt-4">
-        <Button 
-          disabled={isProcessing}
-          className="w-full rounded-full text-base py-6"
-          onClick={onEnhance}
-        >
-          {isProcessing ? 'Enhancing Image...' : hasResult ? 'Enhance Again' : 'Enhance Image with AI'}
-        </Button>
+        {disabled ? (
+          <div className="text-center space-y-4">
+            <p className="text-sm text-muted-foreground">
+              You've reached your free enhancement limit.
+            </p>
+            <Button 
+              asChild
+              className="w-full rounded-full text-base py-6"
+            >
+              <Link to="/pricing">
+                Upgrade to Continue
+              </Link>
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            disabled={isProcessing || disabled}
+            className="w-full rounded-full text-base py-6"
+            onClick={onEnhance}
+          >
+            {isProcessing ? 'Enhancing Image...' : hasResult ? 'Enhance Again' : 'Enhance Image with AI'}
+          </Button>
+        )}
       </div>
     </div>
   );

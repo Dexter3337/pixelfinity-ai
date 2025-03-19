@@ -13,31 +13,49 @@ const DEFAULT_ENHANCEMENT_PARAMS: EnhancementStrengthParams = {
   contrast: 10
 };
 
+// Maximum number of free enhancements per day
+const FREE_TIER_LIMIT = 3;
+
 export const useEnhancement = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [enhancementOption, setEnhancementOption] = useState<EnhancementOption>('auto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhancementResult, setEnhancementResult] = useState<any | null>(null);
-  const [enhancementCount, setEnhancementCount] = useState(0);
+  const [enhancementCount, setEnhancementCount] = useState(() => {
+    // Initialize from localStorage or default to 0
+    const savedCount = localStorage.getItem('enhancementCount');
+    return savedCount ? parseInt(savedCount, 10) : 0;
+  });
   const [enhancementParams, setEnhancementParams] = useState<EnhancementStrengthParams>(DEFAULT_ENHANCEMENT_PARAMS);
   const [processingStage, setProcessingStage] = useState<string>('');
+  const [isEngineInitialized, setIsEngineInitialized] = useState(false);
 
   useEffect(() => {
     const initializeEngine = async () => {
-      setProcessingStage('Initializing AI models...');
-      const success = await enhancementEngine.initialize();
-      
-      if (success) {
-        console.log('Enhancement engine initialized successfully');
+      try {
+        setProcessingStage('Initializing enhancement engine...');
+        const success = await enhancementEngine.initialize();
+        
+        setIsEngineInitialized(success);
+        if (success) {
+          console.log('Enhancement engine initialized successfully');
+        } else {
+          console.log('Enhancement engine using fallback mode');
+        }
+      } catch (error) {
+        console.error('Enhancement engine initialization error:', error);
+      } finally {
         setProcessingStage('');
-      } else {
-        console.error('Enhancement engine initialization failed');
-        toast.error('Failed to initialize enhancement engine. Please reload the page.');
       }
     };
     
     initializeEngine();
   }, []);
+  
+  useEffect(() => {
+    // Save enhancement count to localStorage whenever it changes
+    localStorage.setItem('enhancementCount', enhancementCount.toString());
+  }, [enhancementCount]);
   
   const handleImageSelected = (file: File) => {
     setSelectedImage(file);
@@ -103,9 +121,16 @@ export const useEnhancement = () => {
       return;
     }
     
+    // Check if user has reached free tier limit
+    if (enhancementCount >= FREE_TIER_LIMIT) {
+      toast.error('You have reached your free enhancement limit. Please upgrade to continue.');
+      toast.info('Check our pricing page for subscription options.');
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingStage('Analyzing image...');
-    toast.info('Processing your image with advanced AI enhancement...');
+    toast.info('Processing your image with AI enhancement...');
     
     try {
       setProcessingStage('Applying enhancement algorithms...');
@@ -120,11 +145,11 @@ export const useEnhancement = () => {
       }
       
       setEnhancementResult(result);
-      setEnhancementCount(count => count + 1);
+      setEnhancementCount(prevCount => prevCount + 1);
       
     } catch (error) {
       console.error('Enhancement failed:', error);
-      toast.error('Enhancement failed. Please try again.');
+      toast.error('Enhancement failed. Our systems are experiencing issues. Please try again later.');
     } finally {
       setIsProcessing(false);
       setProcessingStage('');
@@ -139,6 +164,7 @@ export const useEnhancement = () => {
     enhancementCount,
     enhancementParams,
     processingStage,
+    isEngineInitialized,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,

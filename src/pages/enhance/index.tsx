@@ -22,12 +22,15 @@ const Enhance = () => {
     enhancementCount,
     enhancementParams,
     processingStage,
+    isEngineInitialized,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,
     handleEnhance,
     setEnhancementParams
   } = useEnhancement();
+  
+  const isLimitReached = enhancementCount >= 3;
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -43,9 +46,21 @@ const Enhance = () => {
             
             <h1 className="heading-2 mt-4 mb-2">Enhance Your Image</h1>
             <p className="text-muted-foreground text-lg">
-              Upload your photo and let our advanced AI models (Real-ESRGAN & SwinIR) transform your images with stunning detail.
+              Upload your photo and let our advanced AI transform your images with stunning detail.
             </p>
           </div>
+          
+          {isLimitReached && (
+            <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <h3 className="font-medium text-amber-800">Free Enhancement Limit Reached</h3>
+              <p className="text-amber-700 text-sm mt-1">
+                You've used all your free enhancements. 
+                <Link to="/pricing" className="font-medium underline ml-1">
+                  Upgrade your plan
+                </Link> to continue enhancing more images.
+              </p>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <motion.div 
@@ -66,6 +81,7 @@ const Enhance = () => {
                   onParamsChange={setEnhancementParams}
                   hasResult={!!enhancementResult}
                   onResetParams={resetEnhancementParams}
+                  disabled={isLimitReached}
                 />
               )}
               
