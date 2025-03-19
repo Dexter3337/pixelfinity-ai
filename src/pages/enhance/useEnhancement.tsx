@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { enhancementEngine } from '@/lib/enhancementEngine';
-import { enhanceImage } from '@/lib/imageEnhancement';
 import { toast } from 'sonner';
 import { EnhancementOption, EnhancementStrengthParams } from '@/components/EnhancementOptions';
 
@@ -14,60 +13,31 @@ const DEFAULT_ENHANCEMENT_PARAMS: EnhancementStrengthParams = {
   contrast: 10
 };
 
-// Maximum number of free enhancements per day
-const FREE_TIER_LIMIT = 3;
-
 export const useEnhancement = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [enhancementOption, setEnhancementOption] = useState<EnhancementOption>('auto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [enhancementResult, setEnhancementResult] = useState<any | null>(null);
-  const [enhancementCount, setEnhancementCount] = useState(() => {
-    // Initialize from localStorage or default to 0
-    const savedCount = localStorage.getItem('enhancementCount');
-    return savedCount ? parseInt(savedCount, 10) : 0;
-  });
+  const [enhancementCount, setEnhancementCount] = useState(0);
   const [enhancementParams, setEnhancementParams] = useState<EnhancementStrengthParams>(DEFAULT_ENHANCEMENT_PARAMS);
   const [processingStage, setProcessingStage] = useState<string>('');
-  const [isEngineInitialized, setIsEngineInitialized] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
-  const [apiAvailable, setApiAvailable] = useState(true);
 
   useEffect(() => {
     const initializeEngine = async () => {
-      try {
-        setProcessingStage('Initializing enhancement engine...');
-        // Try to initialize the enhancement engine
-        const success = await enhancementEngine.initialize();
-        
-        setIsEngineInitialized(success);
-        if (success) {
-          console.log('Enhancement engine initialized successfully');
-          setUsingFallback(false);
-          setApiAvailable(true);
-        } else {
-          console.log('Enhancement engine using fallback mode');
-          setUsingFallback(true);
-          setApiAvailable(false);
-          toast.info('Using local enhancement mode due to connection issues');
-        }
-      } catch (error) {
-        console.error('Enhancement engine initialization error:', error);
-        setUsingFallback(true);
-        setApiAvailable(false);
-        toast.info('Using local enhancement mode due to connection issues');
-      } finally {
+      setProcessingStage('Initializing AI models...');
+      const success = await enhancementEngine.initialize();
+      
+      if (success) {
+        console.log('Enhancement engine initialized successfully');
         setProcessingStage('');
+      } else {
+        console.error('Enhancement engine initialization failed');
+        toast.error('Failed to initialize enhancement engine. Please reload the page.');
       }
     };
     
     initializeEngine();
   }, []);
-  
-  useEffect(() => {
-    // Save enhancement count to localStorage whenever it changes
-    localStorage.setItem('enhancementCount', enhancementCount.toString());
-  }, [enhancementCount]);
   
   const handleImageSelected = (file: File) => {
     setSelectedImage(file);
@@ -77,7 +47,6 @@ export const useEnhancement = () => {
   const handleEnhancementOptionSelected = (option: EnhancementOption) => {
     setEnhancementOption(option);
     
-    // Apply preset parameters based on the selected enhancement option
     switch (option) {
       case 'hdr':
         setEnhancementParams({
@@ -134,48 +103,28 @@ export const useEnhancement = () => {
       return;
     }
     
-    // Check if user has reached free tier limit
-    if (enhancementCount >= FREE_TIER_LIMIT) {
-      toast.error('You have reached your free enhancement limit. Please upgrade to continue.');
-      toast.info('Check our pricing page for subscription options.');
-      return;
-    }
-    
-    // Check if API is available
-    if (!apiAvailable && !usingFallback) {
-      toast.error('Enhancement services are currently unavailable. Please try again later.');
-      return;
-    }
-    
     setIsProcessing(true);
     setProcessingStage('Analyzing image...');
-    toast.info('Processing your image with AI enhancement...');
+    toast.info('Processing your image with advanced AI enhancement...');
     
     try {
-      let result;
-      
-      // Always use the fallback method from imageEnhancement.ts
       setProcessingStage('Applying enhancement algorithms...');
-      result = await enhanceImage(selectedImage, enhancementOption, enhancementParams);
+      const result = await enhancementEngine.enhance(selectedImage, enhancementOption, enhancementParams);
       
       setProcessingStage('Finalizing results...');
       
-      if (result && result.metrics) {
-        if (result.metrics.improvement < 10) {
-          toast.warning('Only minor improvements were possible for this image.');
-        } else {
-          toast.success('Image enhanced successfully!');
-        }
-        
-        setEnhancementResult(result);
-        setEnhancementCount(prevCount => prevCount + 1);
+      if (result.metrics && result.metrics.improvement < 10) {
+        toast.warning('Only minor improvements were possible for this image.');
       } else {
-        throw new Error('Enhancement result is missing metrics');
+        toast.success('Image enhanced successfully!');
       }
+      
+      setEnhancementResult(result);
+      setEnhancementCount(count => count + 1);
       
     } catch (error) {
       console.error('Enhancement failed:', error);
-      toast.error('Enhancement failed. Please try again with a different image or option.');
+      toast.error('Enhancement failed. Please try again.');
     } finally {
       setIsProcessing(false);
       setProcessingStage('');
@@ -190,9 +139,6 @@ export const useEnhancement = () => {
     enhancementCount,
     enhancementParams,
     processingStage,
-    isEngineInitialized,
-    usingFallback,
-    apiAvailable,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,

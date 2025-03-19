@@ -19,7 +19,7 @@ const Pricing = () => {
       period: 'forever',
       description: 'Perfect for trying out our AI enhancement technology.',
       features: [
-        '3 image enhancements per month',
+        '1 image enhancement per day',
         'Basic enhancement options',
         'Standard resolution output',
         'Web-only access',
@@ -29,48 +29,47 @@ const Pricing = () => {
       buttonVariant: 'outline',
     },
     {
-      name: 'Hobbyist',
+      name: 'Pro',
       tagline: 'For regular users',
-      price: billingPeriod === 'monthly' ? '$9' : '$90',
+      price: billingPeriod === 'monthly' ? '$12.99' : '$119.88',
       period: billingPeriod === 'monthly' ? '/month' : '/year',
-      description: 'Save 16% with annual billing. Perfect for regular photo enhancement needs.',
+      description: 'Save 23% with annual billing. Perfect for regular photo enhancement needs.',
       features: [
-        '50 image enhancements per month',
+        '10 image enhancements per day',
         'All enhancement options',
         'High resolution output',
         'Priority processing',
         'Web & mobile access',
         'Download & share options',
-        '15 MB max file size',
-        'Priority Support'
+        '15 MB max file size'
       ],
-      buttonText: 'Subscribe Now',
+      buttonText: 'Upgrade to Pro',
       highlighted: true,
     },
     {
-      name: 'Pro',
+      name: 'Unlimited',
       tagline: 'For professionals',
-      price: billingPeriod === 'monthly' ? '$29' : '$290',
+      price: billingPeriod === 'monthly' ? '$29.99' : '$269.88',
       period: billingPeriod === 'monthly' ? '/month' : '/year',
-      description: 'Save 17% with annual billing. Ideal for professional photographers and designers.',
+      description: 'Save 25% with annual billing. Ideal for professional photographers and designers.',
       features: [
-        '300 image enhancements per month',
+        'Unlimited image enhancements',
         'All enhancement options',
         'Ultra-high resolution output',
-        'Express processing queue',
+        'Express processing',
         'API access',
         'Batch processing',
         'Advanced analytics',
         '25 MB max file size'
       ],
-      buttonText: 'Go Pro',
+      buttonText: 'Go Unlimited',
     }
   ];
   
   const faqs = [
     {
       question: 'How does the free plan work?',
-      answer: 'Our free plan allows you to enhance up to 3 images per month without any payment required. It\'s perfect for trying out our technology or for occasional use.'
+      answer: 'Our free plan allows you to enhance one image per day without any payment required. It\'s perfect for trying out our technology or for occasional use.'
     },
     {
       question: 'Can I cancel my subscription at any time?',
@@ -78,7 +77,7 @@ const Pricing = () => {
     },
     {
       question: 'What is the maximum file size I can upload?',
-      answer: 'The maximum file size varies by plan: 5 MB for Free users, 15 MB for Hobbyist users, and 25 MB for Pro users.'
+      answer: 'The maximum file size varies by plan: 5 MB for Free users, 15 MB for Pro users, and 25 MB for Unlimited users.'
     },
     {
       question: 'Do you offer a refund if I\'m not satisfied?',
@@ -90,7 +89,7 @@ const Pricing = () => {
     },
     {
       question: 'How does batch processing work?',
-      answer: 'Batch processing, available on the Pro plan, allows you to enhance multiple images at once. Simply upload a zip file containing your images, and our system will process them all automatically.'
+      answer: 'Batch processing, available on the Unlimited plan, allows you to enhance multiple images at once. Simply upload a zip file containing your images, and our system will process them all automatically.'
     }
   ];
   
@@ -108,7 +107,7 @@ const Pricing = () => {
               Choose the Perfect Plan for Your Needs
             </h1>
             <p className="text-muted-foreground text-lg">
-              Whether you're enhancing a single photo or processing hundreds of images, we have a plan that's right for you.
+              Whether you're enhancing a single photo or processing thousands of images, we have a plan that's right for you.
             </p>
             
             <div className="mt-8 inline-flex items-center bg-gray-100 p-1 rounded-full">
@@ -130,7 +129,7 @@ const Pricing = () => {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Yearly <span className="text-xs text-primary font-normal">Save up to 17%</span>
+                Yearly <span className="text-xs text-primary font-normal">Save up to 25%</span>
               </button>
             </div>
           </div>
@@ -161,16 +160,16 @@ const Pricing = () => {
                   <tr className="border-b border-gray-200">
                     <th className="p-4 text-left font-medium text-muted-foreground">Feature</th>
                     <th className="p-4 text-center font-medium">Free</th>
-                    <th className="p-4 text-center font-medium">Hobbyist</th>
                     <th className="p-4 text-center font-medium">Pro</th>
+                    <th className="p-4 text-center font-medium">Unlimited</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr className="border-b border-gray-200">
-                    <td className="p-4 text-sm">Monthly Image Limit</td>
-                    <td className="p-4 text-center text-sm">3 images</td>
-                    <td className="p-4 text-center text-sm">50 images</td>
-                    <td className="p-4 text-center text-sm">300 images</td>
+                    <td className="p-4 text-sm">Daily Image Limit</td>
+                    <td className="p-4 text-center text-sm">1 image</td>
+                    <td className="p-4 text-center text-sm">10 images</td>
+                    <td className="p-4 text-center text-sm">Unlimited</td>
                   </tr>
                   <tr className="border-b border-gray-200">
                     <td className="p-4 text-sm">Max Resolution</td>
@@ -207,12 +206,6 @@ const Pricing = () => {
                     <td className="p-4 text-center text-sm">5 MB</td>
                     <td className="p-4 text-center text-sm">15 MB</td>
                     <td className="p-4 text-center text-sm">25 MB</td>
-                  </tr>
-                  <tr className="border-b border-gray-200">
-                    <td className="p-4 text-sm">Priority Support</td>
-                    <td className="p-4 text-center text-sm"><XIcon className="h-4 w-4 inline text-gray-400" /></td>
-                    <td className="p-4 text-center text-sm"><CheckIcon className="h-4 w-4 inline text-green-500" /></td>
-                    <td className="p-4 text-center text-sm"><CheckIcon className="h-4 w-4 inline text-green-500" /></td>
                   </tr>
                 </tbody>
               </table>
