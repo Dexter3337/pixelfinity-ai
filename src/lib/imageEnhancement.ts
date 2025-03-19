@@ -645,3 +645,41 @@ export type EnhancementResult = {
   before: string;
   after: string;
 };
+
+// Add a function to record an image enhancement in the database
+export const recordImageEnhancement = async (
+  userId: string,
+  originalUrl: string,
+  enhancedUrl: string,
+  enhancementOption: EnhancementOption,
+  qualityOption: QualityOption
+) => {
+  try {
+    // Import supabase here to avoid circular dependencies
+    const { supabase } = await import("@/integrations/supabase/client");
+
+    // Step 1: Record the enhancement in the enhanced_images table
+    const { error: insertError } = await supabase
+      .from("enhanced_images")
+      .insert({
+        user_id: userId,
+        original_url: originalUrl,
+        enhanced_url: enhancedUrl,
+        enhancement_type: enhancementOption,
+        quality: qualityOption
+      });
+
+    if (insertError) throw insertError;
+
+    // Step 2: Decrement the user's remaining enhancements count using our custom function
+    const { error: decrementError } = await supabase
+      .rpc("decrement_enhancements", { p_user_id: userId });
+
+    if (decrementError) throw decrementError;
+
+    return true;
+  } catch (error) {
+    console.error("Error recording enhancement:", error);
+    return false;
+  }
+};

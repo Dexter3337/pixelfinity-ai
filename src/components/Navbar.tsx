@@ -2,12 +2,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { MenuIcon, X } from 'lucide-react';
+import { MenuIcon, X, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, signOut, profile } = useAuth();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +26,12 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
   
+  // Get initials for avatar
+  const getInitials = (email: string) => {
+    if (!email) return "U";
+    return email.charAt(0).toUpperCase();
+  };
+  
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Enhance', path: '/enhance' },
@@ -30,7 +39,16 @@ const Navbar = () => {
     { name: 'Pricing', path: '/pricing' },
   ];
   
+  // Add dashboard link if user is logged in
+  if (user) {
+    navLinks.push({ name: 'Dashboard', path: '/dashboard' });
+  }
+  
   const isActive = (path: string) => location.pathname === path;
+  
+  const handleSignOut = async () => {
+    await signOut();
+  };
   
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -58,9 +76,26 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-          <Button size="sm" className="rounded-full px-4 shadow-sm">
-            Try for Free
-          </Button>
+          
+          {user ? (
+            <div className="flex items-center gap-2">
+              <Link to="/dashboard">
+                <Avatar className="h-8 w-8 hover:ring-2 ring-primary/30 transition-all">
+                  <AvatarImage src={profile?.avatar_url} />
+                  <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                    {getInitials(user.email || "")}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+              <Button variant="outline" size="sm" onClick={handleSignOut} className="ml-2">
+                Log Out
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" className="rounded-full px-4 shadow-sm" asChild>
+              <Link to="/auth">Sign In</Link>
+            </Button>
+          )}
         </nav>
         
         {/* Mobile Menu Button */}
@@ -90,9 +125,27 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            <Button size="sm" className="rounded-full px-4 shadow-sm self-start">
-              Try for Free
-            </Button>
+            
+            {user ? (
+              <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url} />
+                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                      {getInitials(user.email || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium">{user.email}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleSignOut} className="mt-2">
+                  Log Out
+                </Button>
+              </div>
+            ) : (
+              <Button className="rounded-full self-start" asChild>
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}

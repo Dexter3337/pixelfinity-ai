@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -10,8 +9,9 @@ import ImageUploader from '@/components/ImageUploader';
 import EnhancementOptions, { EnhancementOption, QualityOption } from '@/components/EnhancementOptions';
 import BeforeAfterSlider from '@/components/BeforeAfterSlider';
 import ProcessingAnimation from '@/components/ProcessingAnimation';
-import { enhancementEngine, EnhancementResult } from '@/lib/imageEnhancement';
+import { enhancementEngine, EnhancementResult, recordImageEnhancement } from '@/lib/imageEnhancement';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Enhance = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -22,8 +22,8 @@ const Enhance = () => {
   const [enhancementCount, setEnhancementCount] = useState(0);
   const [apiAvailable, setApiAvailable] = useState(true);
   const [processingStep, setProcessingStep] = useState('');
-  
-  // Initialize enhancement engine and check API availability
+  const { user, subscription, refreshUserData } = useAuth();
+
   useEffect(() => {
     enhancementEngine.initialize()
       .then(success => {
@@ -37,7 +37,6 @@ const Enhance = () => {
         }
       });
       
-    // Set up toast event listeners
     const toastListener = (event: Event) => {
       if ((event as CustomEvent).detail?.message) {
         setProcessingStep((event as CustomEvent).detail.message);
@@ -50,19 +49,23 @@ const Enhance = () => {
       document.removeEventListener('sonner.info', toastListener);
     };
   }, []);
-  
+
   const handleImageSelected = (file: File) => {
-    // Check file size
-    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+    if (subscription?.remaining_enhancements <= 0 && subscription?.plan !== 'unlimited') {
+      toast.error('You have no enhancements remaining. Please upgrade your plan to continue.');
+      return;
+    }
+    
+    const maxSizeInBytes = (subscription?.max_file_size || 5) * 1024 * 1024;
     if (file.size > maxSizeInBytes) {
-      toast.error('File size exceeds 5MB limit. Please upload a smaller image.');
+      toast.error(`File size exceeds ${subscription?.max_file_size || 5}MB limit for your plan. Please upload a smaller image.`);
       return;
     }
     
     setSelectedImage(file);
     setEnhancementResult(null);
   };
-  
+
   const handleEnhance = async () => {
     if (!selectedImage) {
       toast.error('Please upload an image first.');
@@ -74,16 +77,30 @@ const Enhance = () => {
       return;
     }
     
+    if (subscription?.remaining_enhancements <= 0 && subscription?.plan !== 'unlimited') {
+      toast.error('You have no enhancements remaining. Please upgrade your plan to continue.');
+      return;
+    }
+    
     setIsProcessing(true);
     setProcessingStep('Analyzing your image...');
     
     try {
-      // Process the image
       const result = await enhancementEngine.enhance(selectedImage, enhancementOption, qualityOption);
       
-      // Update state with result
       setEnhancementResult(result);
-      setEnhancementCount(count => count + 1);
+      
+      if (user) {
+        await recordImageEnhancement(
+          user.id,
+          result.before,
+          result.after,
+          enhancementOption,
+          qualityOption
+        );
+        
+        await refreshUserData();
+      }
       
       toast.success(`Image enhanced successfully with ${qualityOption} quality!`);
     } catch (error) {
@@ -93,11 +110,10 @@ const Enhance = () => {
       setIsProcessing(false);
     }
   };
-  
+
   const handleDownload = () => {
     if (!enhancementResult) return;
     
-    // Create a download link
     const link = document.createElement('a');
     link.href = enhancementResult.after;
     link.download = `enhanced-${qualityOption}-${selectedImage?.name || 'image'}.jpg`;
@@ -107,16 +123,14 @@ const Enhance = () => {
     
     toast.success('Image downloaded successfully.');
   };
-  
+
   const handleShare = async () => {
     if (!enhancementResult) return;
     
     try {
-      // Convert data URL to blob
       const response = await fetch(enhancementResult.after);
       const blob = await response.blob();
       
-      // Use Web Share API if available
       if (navigator.share) {
         await navigator.share({
           files: [new File([blob], 'enhanced-image.jpg', { type: 'image/jpeg' })],
@@ -126,7 +140,6 @@ const Enhance = () => {
         
         toast.success('Image shared successfully.');
       } else {
-        // Fallback for browsers that don't support Web Share API
         toast.error('Sharing is not supported in your browser.');
       }
     } catch (error) {
@@ -134,7 +147,7 @@ const Enhance = () => {
       toast.error('Failed to share image.');
     }
   };
-  
+
   const getQualityDetails = () => {
     switch (qualityOption) {
       case '2x':
@@ -145,7 +158,7 @@ const Enhance = () => {
         return 'Medium quality (4x upscale)';
     }
   };
-  
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -165,7 +178,6 @@ const Enhance = () => {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            {/* Left Column: Upload and Options */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -193,14 +205,23 @@ const Enhance = () => {
                 <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
                   <div 
                     className="bg-primary h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.max(0, 100 - enhancementCount * 100)}%` }}
+                    style={{ 
+                      width: subscription?.plan === "unlimited" ? "100%" : 
+                      `${Math.max(0, (subscription?.remaining_enhancements / (subscription?.plan === "pro" ? 10 : 1)) * 100)}%` 
+                    }}
                   ></div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  You have {Math.max(0, 1 - enhancementCount)} free enhancements remaining today. 
-                  <Link to="/pricing" className="text-primary hover:underline ml-1">
-                    Upgrade for more
-                  </Link>
+                  {subscription?.plan === "unlimited" ? (
+                    "You have unlimited enhancements with your current plan."
+                  ) : (
+                    <>
+                      You have {subscription?.remaining_enhancements || 0} enhancement{subscription?.remaining_enhancements !== 1 ? "s" : ""} remaining. 
+                      <Link to="/pricing" className="text-primary hover:underline ml-1">
+                        Upgrade for more
+                      </Link>
+                    </>
+                  )}
                 </p>
                 
                 {!apiAvailable && (
@@ -213,7 +234,6 @@ const Enhance = () => {
               </div>
             </motion.div>
             
-            {/* Right Column: Results */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
