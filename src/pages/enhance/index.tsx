@@ -1,7 +1,7 @@
 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -12,6 +12,7 @@ import ResultSection from './ResultSection';
 import ProcessingSection from './ProcessingSection';
 import EmptyResultSection from './EmptyResultSection';
 import EnhancementCounter from './EnhancementCounter';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Enhance = () => {
   const {
@@ -23,6 +24,7 @@ const Enhance = () => {
     enhancementParams,
     processingStage,
     isEngineInitialized,
+    usingFallback,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,
@@ -49,6 +51,15 @@ const Enhance = () => {
               Upload your photo and let our advanced AI transform your images with stunning detail.
             </p>
           </div>
+          
+          {usingFallback && (
+            <Alert className="mb-6 bg-blue-50 border-blue-200">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700">
+                Using local enhancement mode. Your images will be processed locally for best results.
+              </AlertDescription>
+            </Alert>
+          )}
           
           {isLimitReached && (
             <div className="mb-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">

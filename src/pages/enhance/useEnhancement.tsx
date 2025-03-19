@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { enhancementEngine } from '@/lib/enhancementEngine';
+import { enhanceImage } from '@/lib/imageEnhancement';
 import { toast } from 'sonner';
 import { EnhancementOption, EnhancementStrengthParams } from '@/components/EnhancementOptions';
 
@@ -29,6 +30,7 @@ export const useEnhancement = () => {
   const [enhancementParams, setEnhancementParams] = useState<EnhancementStrengthParams>(DEFAULT_ENHANCEMENT_PARAMS);
   const [processingStage, setProcessingStage] = useState<string>('');
   const [isEngineInitialized, setIsEngineInitialized] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     const initializeEngine = async () => {
@@ -39,11 +41,16 @@ export const useEnhancement = () => {
         setIsEngineInitialized(success);
         if (success) {
           console.log('Enhancement engine initialized successfully');
+          setUsingFallback(false);
         } else {
           console.log('Enhancement engine using fallback mode');
+          setUsingFallback(true);
+          toast.info('Using local enhancement mode due to connection issues');
         }
       } catch (error) {
         console.error('Enhancement engine initialization error:', error);
+        setUsingFallback(true);
+        toast.info('Using local enhancement mode due to connection issues');
       } finally {
         setProcessingStage('');
       }
@@ -133,8 +140,11 @@ export const useEnhancement = () => {
     toast.info('Processing your image with AI enhancement...');
     
     try {
+      let result;
+      
+      // Always use the fallback method from imageEnhancement.ts since we're having API issues
       setProcessingStage('Applying enhancement algorithms...');
-      const result = await enhancementEngine.enhance(selectedImage, enhancementOption, enhancementParams);
+      result = await enhanceImage(selectedImage, enhancementOption, enhancementParams);
       
       setProcessingStage('Finalizing results...');
       
@@ -149,7 +159,7 @@ export const useEnhancement = () => {
       
     } catch (error) {
       console.error('Enhancement failed:', error);
-      toast.error('Enhancement failed. Our systems are experiencing issues. Please try again later.');
+      toast.error('Enhancement failed. Please try again with a different image or option.');
     } finally {
       setIsProcessing(false);
       setProcessingStage('');
@@ -165,6 +175,7 @@ export const useEnhancement = () => {
     enhancementParams,
     processingStage,
     isEngineInitialized,
+    usingFallback,
     handleImageSelected,
     handleEnhancementOptionSelected,
     resetEnhancementParams,

@@ -1,5 +1,6 @@
 
 import { Link } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
 
 interface EnhancementCounterProps {
   enhancementCount: number;
@@ -15,12 +16,7 @@ const EnhancementCounter = ({ enhancementCount }: EnhancementCounterProps) => {
       <h3 className="text-sm font-medium text-muted-foreground mb-2">
         Free Enhancements Remaining Today
       </h3>
-      <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
-        <div 
-          className="bg-primary h-full rounded-full transition-all duration-500"
-          style={{ width: `${Math.max(0, 100 - percentUsed)}%` }}
-        ></div>
-      </div>
+      <Progress value={percentUsed} className="h-3" />
       <p className="text-xs text-muted-foreground mt-2">
         You have {remaining} free enhancements remaining. 
         <Link to="/pricing" className="text-primary hover:underline ml-1">
