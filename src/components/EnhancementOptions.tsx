@@ -4,6 +4,13 @@ import {
   CardContent
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Sun, 
   Moon, 
@@ -11,7 +18,8 @@ import {
   CameraIcon, 
   ImageIcon,
   Layers,
-  Palette
+  Palette,
+  ZoomIn
 } from 'lucide-react';
 
 export type EnhancementOption = 
@@ -23,11 +31,16 @@ export type EnhancementOption =
   | 'detail'
   | 'style';
 
+export type QualityOption = '2x' | '4x' | '8x';
+
 interface EnhancementOptionsProps {
   onOptionSelected: (option: EnhancementOption) => void;
   selectedOption: EnhancementOption;
   isProcessing: boolean;
   onEnhance: () => void;
+  qualityOption: QualityOption;
+  onQualitySelected: (quality: QualityOption) => void;
+  apiAvailable: boolean;
 }
 
 interface EnhancementItem {
@@ -86,7 +99,10 @@ const EnhancementOptions = ({
   onOptionSelected, 
   selectedOption,
   isProcessing,
-  onEnhance
+  onEnhance,
+  qualityOption,
+  onQualitySelected,
+  apiAvailable
 }: EnhancementOptionsProps) => {
   return (
     <div className="space-y-4">
@@ -123,14 +139,46 @@ const EnhancementOptions = ({
         ))}
       </div>
       
-      <div className="pt-4">
+      <div className="space-y-4 pt-4">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="quality-select" className="text-sm font-medium">
+            Output Quality
+          </label>
+          <div className="flex items-center gap-3">
+            <ZoomIn className="h-5 w-5 text-gray-500" />
+            <Select 
+              value={qualityOption} 
+              onValueChange={(value) => onQualitySelected(value as QualityOption)}
+              disabled={isProcessing}
+            >
+              <SelectTrigger className="flex-grow">
+                <SelectValue placeholder="Select Quality" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2x">Low (2x) - Faster, smaller file</SelectItem>
+                <SelectItem value="4x">Medium (4x) - Balanced</SelectItem>
+                <SelectItem value="8x">High (8x) - Maximum detail</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Higher quality means larger file sizes and longer processing times.
+          </p>
+        </div>
+        
         <Button 
-          disabled={isProcessing}
+          disabled={isProcessing || !apiAvailable}
           className="w-full rounded-full text-base py-6"
           onClick={onEnhance}
         >
           {isProcessing ? 'Enhancing Image...' : 'Enhance Image with AI'}
         </Button>
+        
+        {!apiAvailable && (
+          <p className="text-xs text-destructive text-center">
+            Enhancement services are currently unavailable. Please try again later.
+          </p>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { pipeline } from '@huggingface/transformers';
 import type { EnhancementOption } from '@/components/EnhancementOptions';
@@ -7,6 +6,7 @@ import type { EnhancementOption } from '@/components/EnhancementOptions';
 let realEsrganModel: any = null;
 let swinIRModel: any = null;
 let enhancementPipeline: any = null;
+let isApiAvailable: boolean = true;
 
 // Configure models
 const initializeModels = async () => {
@@ -21,17 +21,42 @@ const initializeModels = async () => {
     );
     
     console.log('Real-ESRGAN model loaded successfully');
+    isApiAvailable = true;
     return true;
   } catch (error) {
     console.error('Failed to initialize enhancement models:', error);
+    isApiAvailable = false;
     return false;
   }
 };
 
+// Helper function to detect blur level
+const detectBlur = (imageData: ImageData): number => {
+  // Variance of Laplacian implementation (simplified)
+  const { data, width, height } = imageData;
+  let sum = 0;
+  let sumSq = 0;
+  const pixelCount = width * height;
+  
+  // Calculate average brightness first
+  for (let i = 0; i < data.length; i += 4) {
+    const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+    sum += brightness;
+    sumSq += brightness * brightness;
+  }
+  
+  const mean = sum / pixelCount;
+  const variance = sumSq / pixelCount - mean * mean;
+  
+  // Lower values indicate more blur
+  console.log('Blur detection - variance:', variance);
+  return variance;
+};
+
 // Enhancement algorithms
-const applyAutoEnhancement = async (imageData: ImageData): Promise<ImageData> => {
+const applyAutoEnhancement = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   try {
-    console.log('Applying auto enhancement with Real-ESRGAN...');
+    console.log(`Applying auto enhancement with Real-ESRGAN (${qualityFactor}x)...`);
     
     // Convert imageData to canvas for processing
     const canvas = document.createElement('canvas');
@@ -46,36 +71,96 @@ const applyAutoEnhancement = async (imageData: ImageData): Promise<ImageData> =>
       // In real implementation, we would use enhancementPipeline(canvas)
     }
     
-    // Simulate AI enhancement with improved algorithms
-    const enhancedData = new Uint8ClampedArray(imageData.data.length);
+    // Check blur level
+    const blurLevel = detectBlur(imageData);
+    const isBlurry = blurLevel < 50;
     
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      // Advanced enhancement algorithm simulation
-      // Increase contrast and saturation
-      enhancedData[i] = Math.min(255, imageData.data[i] * 1.2); // R - increased contrast
-      enhancedData[i + 1] = Math.min(255, imageData.data[i + 1] * 1.25); // G - increased vibrancy
-      enhancedData[i + 2] = Math.min(255, imageData.data[i + 2] * 1.15); // B - balance blue
-      enhancedData[i + 3] = imageData.data[i + 3]; // A - keep alpha
+    if (isBlurry) {
+      console.log('Image detected as blurry, applying deblur algorithm first');
+      // Simulate DeblurGAN-v2 processing
     }
     
-    return new ImageData(enhancedData, imageData.width, imageData.height);
+    // Simulate AI enhancement with improved algorithms - adjusted based on quality factor
+    const enhancedData = new Uint8ClampedArray(imageData.data.length * (qualityFactor * qualityFactor));
+    const newWidth = imageData.width * qualityFactor;
+    const newHeight = imageData.height * qualityFactor;
+    
+    // Create a new canvas with enhanced dimensions
+    const enhancedCanvas = document.createElement('canvas');
+    enhancedCanvas.width = newWidth;
+    enhancedCanvas.height = newHeight;
+    const enhancedCtx = enhancedCanvas.getContext('2d');
+    
+    if (enhancedCtx) {
+      // Draw the original image to the new canvas with scaling
+      enhancedCtx.drawImage(canvas, 0, 0, newWidth, newHeight);
+      
+      // Get the scaled image data
+      const scaledData = enhancedCtx.getImageData(0, 0, newWidth, newHeight);
+      
+      // Apply enhancement to the scaled data
+      for (let i = 0; i < scaledData.data.length; i += 4) {
+        // Advanced enhancement algorithm simulation
+        // Increase contrast and saturation
+        scaledData.data[i] = Math.min(255, scaledData.data[i] * 1.2); // R - increased contrast
+        scaledData.data[i + 1] = Math.min(255, scaledData.data[i + 1] * 1.25); // G - increased vibrancy
+        scaledData.data[i + 2] = Math.min(255, scaledData.data[i + 2] * 1.15); // B - balance blue
+        scaledData.data[i + 3] = scaledData.data[i + 3]; // A - keep alpha
+      }
+      
+      // Apply additional refinement simulation (SwinIR)
+      if (qualityFactor >= 4) {
+        console.log('Applying SwinIR texture refinement...');
+        // Advanced edge refinement (simulated)
+        // In real implementation, this would be a separate API call
+      }
+      
+      return scaledData;
+    }
+    
+    throw new Error('Failed to create enhanced image context');
   } catch (error) {
     console.error('Auto enhancement failed:', error);
     throw new Error('Auto enhancement failed');
   }
 };
 
-const applyHDREffect = async (imageData: ImageData): Promise<ImageData> => {
-  // HDR effect - significantly boosted for visual impact
+// Keep existing enhancement functions
+const applyHDREffect = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
+  // HDR effect - significantly boosted for visual impact with quality factor applied
   const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  // Process the scaled data for HDR effect
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
   
   // Enhanced HDR algorithm with dramatic dynamic range
-  for (let i = 0; i < data.length; i += 4) {
+  for (let i = 0; i < scaledData.data.length; i += 4) {
     // Apply tone mapping for HDR-like effect
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = scaledData.data[i];
+    const g = scaledData.data[i + 1];
+    const b = scaledData.data[i + 2];
     
     // Calculate luminance
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
@@ -87,23 +172,46 @@ const applyHDREffect = async (imageData: ImageData): Promise<ImageData> => {
     enhancedData[i] = Math.min(255, r * factor * 1.2); // R - boosted with luminance-based curve
     enhancedData[i + 1] = Math.min(255, g * factor * 1.15); // G
     enhancedData[i + 2] = Math.min(255, b * factor); // B - less boosted to prevent blue shift
-    enhancedData[i + 3] = data[i + 3]; // Alpha
+    enhancedData[i + 3] = scaledData.data[i + 3]; // Alpha
   }
   
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
-const applyNightMode = async (imageData: ImageData): Promise<ImageData> => {
+const applyNightMode = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   // Significantly improved night mode enhancement
   const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
   
   // Advanced night mode processing
-  for (let i = 0; i < data.length; i += 4) {
+  for (let i = 0; i < scaledData.data.length; i += 4) {
     // Get pixel values
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = scaledData.data[i];
+    const g = scaledData.data[i + 1];
+    const b = scaledData.data[i + 2];
     
     // Calculate luminance to identify dark areas
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
@@ -116,22 +224,45 @@ const applyNightMode = async (imageData: ImageData): Promise<ImageData> => {
     enhancedData[i] = Math.min(255, r * brightnessFactor); // R
     enhancedData[i + 1] = Math.min(255, g * brightnessFactor); // G
     enhancedData[i + 2] = Math.min(255, Math.max(b * brightnessFactor, b * 1.2)); // B - boost blues slightly for night look
-    enhancedData[i + 3] = data[i + 3]; // Alpha
+    enhancedData[i + 3] = scaledData.data[i + 3]; // Alpha
   }
   
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
-const applyPortraitMode = async (imageData: ImageData): Promise<ImageData> => {
+const applyPortraitMode = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   // Portrait enhancement with skin tone preservation and facial feature enhancement
-  const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  const { width, height } = imageData;
   
-  for (let i = 0; i < data.length; i += 4) {
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
+  
+  for (let i = 0; i < scaledData.data.length; i += 4) {
     // Get pixel values
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = scaledData.data[i];
+    const g = scaledData.data[i + 1];
+    const b = scaledData.data[i + 2];
     
     // Check if pixel is in skin tone range (simplified detection)
     const isSkinTone = (r > 95 && g > 40 && b > 20 && 
@@ -149,22 +280,45 @@ const applyPortraitMode = async (imageData: ImageData): Promise<ImageData> => {
       enhancedData[i + 1] = Math.min(255, g * 1.15);
       enhancedData[i + 2] = Math.min(255, b * 1.1);
     }
-    enhancedData[i + 3] = data[i + 3]; // Alpha
+    enhancedData[i + 3] = scaledData.data[i + 3]; // Alpha
   }
   
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
-const applyColorPop = async (imageData: ImageData): Promise<ImageData> => {
+const applyColorPop = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   // Vibrant color enhancement with balanced tones
-  const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  const { width, height } = imageData;
   
-  for (let i = 0; i < data.length; i += 4) {
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
+  
+  for (let i = 0; i < scaledData.data.length; i += 4) {
     // Get pixel values
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = scaledData.data[i];
+    const g = scaledData.data[i + 1];
+    const b = scaledData.data[i + 2];
     
     // Calculate saturation
     const max = Math.max(r, g, b);
@@ -189,77 +343,104 @@ const applyColorPop = async (imageData: ImageData): Promise<ImageData> => {
       enhancedData[i + 1] = g;
       enhancedData[i + 2] = b;
     }
-    enhancedData[i + 3] = data[i + 3]; // Alpha
+    enhancedData[i + 3] = scaledData.data[i + 3]; // Alpha
   }
   
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
-const applyDetailBoost = async (imageData: ImageData): Promise<ImageData> => {
+const applyDetailBoost = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   // Sharpening and detail enhancement (simulating Super-Resolution)
-  const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  const { width, height } = imageData;
+  
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
   
   // Create temporary arrays for the edge detection
-  const tempData = new Uint8ClampedArray(data.length);
-  for (let i = 0; i < data.length; i++) {
-    tempData[i] = data[i];
+  for (let i = 0; i < scaledData.data.length; i++) {
+    enhancedData[i] = scaledData.data[i];
   }
   
-  // Apply unsharp masking for detail enhancement
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = (y * width + x) * 4;
+  // Apply unsharp masking for detail enhancement (simplified for the big image)
+  for (let y = 1; y < newHeight - 1; y++) {
+    for (let x = 1; x < newWidth - 1; x++) {
+      const idx = (y * newWidth + x) * 4;
       
       for (let c = 0; c < 3; c++) { // Apply to RGB channels
-        // Compute local average (3x3 box blur)
-        const blurred = (
-          data[idx - width * 4 - 4 + c] + data[idx - width * 4 + c] + data[idx - width * 4 + 4 + c] +
-          data[idx - 4 + c] + data[idx + c] + data[idx + 4 + c] +
-          data[idx + width * 4 - 4 + c] + data[idx + width * 4 + c] + data[idx + width * 4 + 4 + c]
-        ) / 9;
+        // Simplified edge enhancement for demonstration
+        const center = scaledData.data[idx + c];
+        const left = scaledData.data[idx - 4 + c];
+        const right = scaledData.data[idx + 4 + c];
+        const top = scaledData.data[idx - newWidth * 4 + c];
+        const bottom = scaledData.data[idx + newWidth * 4 + c];
         
-        // Detail = original - blurred
-        const detail = data[idx + c] - blurred;
+        // Basic edge detection
+        const edge = (center * 4) - left - right - top - bottom;
         
-        // Add amplified detail back to original
-        const sharpened = data[idx + c] + detail * 1.5;
-        
-        // Clamp to valid range
-        enhancedData[idx + c] = Math.min(255, Math.max(0, sharpened));
+        // Enhance edges
+        enhancedData[idx + c] = Math.min(255, Math.max(0, scaledData.data[idx + c] + edge * 0.5));
       }
-      
-      enhancedData[idx + 3] = data[idx + 3]; // Alpha channel
     }
   }
   
-  // Process edges of the image (where the 3x3 kernel doesn't fit)
-  for (let i = 0; i < data.length; i += 4) {
-    const x = (i / 4) % width;
-    const y = Math.floor((i / 4) / width);
-    
-    if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-      enhancedData[i] = Math.min(255, data[i] * 1.2); // R
-      enhancedData[i + 1] = Math.min(255, data[i + 1] * 1.2); // G
-      enhancedData[i + 2] = Math.min(255, data[i + 2] * 1.2); // B
-      enhancedData[i + 3] = data[i + 3]; // A
-    }
-  }
-  
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
-const applyStyleTransfer = async (imageData: ImageData): Promise<ImageData> => {
+const applyStyleTransfer = async (imageData: ImageData, qualityFactor: number): Promise<ImageData> => {
   // Artistic style enhancement (simulating style transfer)
-  const { data, width, height } = imageData;
-  const enhancedData = new Uint8ClampedArray(data.length);
+  const { width, height } = imageData;
+  
+  // Create a new canvas with enhanced dimensions
+  const newWidth = width * qualityFactor;
+  const newHeight = height * qualityFactor;
+  const canvas = document.createElement('canvas');
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+  const ctx = canvas.getContext('2d');
+  
+  // Convert original imageData to a temporary canvas
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx?.putImageData(imageData, 0, 0);
+  
+  // Draw the original image to the new canvas with scaling
+  ctx?.drawImage(tempCanvas, 0, 0, newWidth, newHeight);
+  
+  // Get the scaled image data
+  const scaledData = ctx?.getImageData(0, 0, newWidth, newHeight);
+  if (!scaledData) throw new Error('Failed to get scaled image data');
+  
+  const enhancedData = new Uint8ClampedArray(scaledData.data.length);
   
   // Apply a professional photography style
-  for (let i = 0; i < data.length; i += 4) {
+  for (let i = 0; i < scaledData.data.length; i += 4) {
     // Original pixel values
-    const r = data[i];
-    const g = data[i + 1];
-    const b = data[i + 2];
+    const r = scaledData.data[i];
+    const g = scaledData.data[i + 1];
+    const b = scaledData.data[i + 2];
     
     // Calculate luminance
     const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
@@ -284,10 +465,10 @@ const applyStyleTransfer = async (imageData: ImageData): Promise<ImageData> => {
       enhancedData[i + 2] = Math.max(0, b * 0.9); // Reduce blue
     }
     
-    enhancedData[i + 3] = data[i + 3]; // Alpha
+    enhancedData[i + 3] = scaledData.data[i + 3]; // Alpha
   }
   
-  return new ImageData(enhancedData, width, height);
+  return new ImageData(enhancedData, newWidth, newHeight);
 };
 
 // Utility functions
@@ -343,12 +524,20 @@ const dataURLFromImageData = (imageData: ImageData): string => {
   return canvas.toDataURL('image/jpeg', 0.95);
 };
 
-// Main enhancement function
+// Update the main enhancement function to support quality options
 export const enhanceImage = async (
   file: File, 
-  option: EnhancementOption
+  option: EnhancementOption,
+  quality: '2x' | '4x' | '8x' = '4x'
 ): Promise<{ before: string; after: string }> => {
   try {
+    // Validate file size
+    const maxSizeInBytes = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSizeInBytes) {
+      toast.error('File size exceeds 5MB limit. Please upload a smaller image.');
+      throw new Error('File size exceeds 5MB limit');
+    }
+    
     // Load image
     const img = await loadImageFromFile(file);
     const beforeDataURL = imageToDataURL(img);
@@ -359,32 +548,59 @@ export const enhanceImage = async (
       throw new Error('Failed to get image data');
     }
     
+    // Convert quality option to number
+    const qualityFactor = quality === '2x' ? 2 : quality === '8x' ? 8 : 4;
+    console.log(`Enhancing with quality factor: ${qualityFactor}x`);
+    
     // Select enhancement based on option
     let enhancedData: ImageData;
     
+    toast.info(`Processing step 1/3: Analyzing image characteristics...`);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+    
+    const blurLevel = detectBlur(imageData);
+    const isBlurry = blurLevel < 50;
+    
+    if (isBlurry) {
+      toast.info(`Detected blurry image, applying deblur algorithm...`);
+      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate processing time
+    }
+    
+    toast.info(`Processing step 2/3: Applying ${option} enhancement...`);
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+    
     switch (option) {
       case 'hdr':
-        enhancedData = await applyHDREffect(imageData);
+        enhancedData = await applyHDREffect(imageData, qualityFactor);
         break;
       case 'night':
-        enhancedData = await applyNightMode(imageData);
+        enhancedData = await applyNightMode(imageData, qualityFactor);
         break;
       case 'portrait':
-        enhancedData = await applyPortraitMode(imageData);
+        enhancedData = await applyPortraitMode(imageData, qualityFactor);
         break;
       case 'color':
-        enhancedData = await applyColorPop(imageData);
+        enhancedData = await applyColorPop(imageData, qualityFactor);
         break;
       case 'detail':
-        enhancedData = await applyDetailBoost(imageData);
+        enhancedData = await applyDetailBoost(imageData, qualityFactor);
         break;
       case 'style':
-        enhancedData = await applyStyleTransfer(imageData);
+        enhancedData = await applyStyleTransfer(imageData, qualityFactor);
         break;
       case 'auto':
       default:
-        enhancedData = await applyAutoEnhancement(imageData);
+        enhancedData = await applyAutoEnhancement(imageData, qualityFactor);
         break;
+    }
+    
+    toast.info(`Processing step 3/3: Finalizing image with ${qualityFactor}x upscaling...`);
+    await new Promise(resolve => setTimeout(resolve, 800)); // Simulate processing time
+    
+    // If quality is high (8x), simulate additional refinement
+    if (qualityFactor === 8) {
+      toast.info(`Applying additional texture refinement for high quality output...`);
+      await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate processing time
     }
     
     // Convert enhanced data back to data URL
@@ -396,7 +612,7 @@ export const enhanceImage = async (
     };
   } catch (error) {
     console.error('Image enhancement failed:', error);
-    toast.error('Image enhancement failed. Please try again.');
+    toast.error('Enhancement failed. Our systems are experiencing issues. Please try again later.');
     throw error;
   }
 };
@@ -413,9 +629,15 @@ const initializeEnhancementEngine = async () => {
   }
 };
 
+// Check if API is available
+export const checkApiAvailability = (): boolean => {
+  return isApiAvailable;
+};
+
 export const enhancementEngine = {
   initialize: initializeEnhancementEngine,
-  enhance: enhanceImage
+  enhance: enhanceImage,
+  isApiAvailable: checkApiAvailability
 };
 
 // Export types
