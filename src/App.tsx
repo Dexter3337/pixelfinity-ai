@@ -8,7 +8,7 @@ import { AnimatePresence } from "framer-motion";
 
 // Pages
 import Index from "./pages/Index";
-import Enhance from "./pages/enhance";
+import Enhance from "./pages/Enhance";
 import Gallery from "./pages/Gallery";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
