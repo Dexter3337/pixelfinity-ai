@@ -12,10 +12,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { EnhancedImage } from "@/types/supabase";
 
 const Dashboard = () => {
   const { user, profile, subscription, refreshUserData } = useAuth();
-  const [recentImages, setRecentImages] = useState<any[]>([]);
+  const [recentImages, setRecentImages] = useState<EnhancedImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {

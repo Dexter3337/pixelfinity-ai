@@ -9,13 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      enhanced_images: {
+        Row: {
+          created_at: string
+          enhanced_url: string
+          enhancement_type: string
+          id: string
+          original_url: string
+          quality: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enhanced_url: string
+          enhancement_type: string
+          id?: string
+          original_url: string
+          quality: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enhanced_url?: string
+          enhancement_type?: string
+          id?: string
+          original_url?: string
+          quality?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          updated_at: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id: string
+          updated_at?: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          updated_at?: string
+          username?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expiry_date: string
+          id: string
+          max_file_size: number
+          plan: string
+          remaining_enhancements: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          max_file_size?: number
+          plan?: string
+          remaining_enhancements?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          max_file_size?: number
+          plan?: string
+          remaining_enhancements?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrement_enhancements: {
+        Args: {
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

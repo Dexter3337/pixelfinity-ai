@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { pipeline } from '@huggingface/transformers';
 import type { EnhancementOption } from '@/components/EnhancementOptions';
+import { QualityOption } from '@/types/supabase';
 
 // Initialize models
 let realEsrganModel: any = null;
@@ -528,7 +529,7 @@ const dataURLFromImageData = (imageData: ImageData): string => {
 export const enhanceImage = async (
   file: File, 
   option: EnhancementOption,
-  quality: '2x' | '4x' | '8x' = '4x'
+  quality: QualityOption = '4x'
 ): Promise<{ before: string; after: string }> => {
   try {
     // Validate file size
